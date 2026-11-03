@@ -2,6 +2,23 @@
 
 Ứng dụng Flutter hỗ trợ học tập, tổ chức theo **Clean Architecture**, dùng **Supabase** (Auth, PostgreSQL, Storage, Edge Functions) và **Gemini API** ở phía máy chủ.
 
+## Xem bản mẫu UX/UI không cần đăng nhập
+
+Mặc định ứng dụng mở thẳng trang chủ và các tab Lịch, Quiz, AI, Thống kê với dữ liệu minh họa. Không cần Supabase, Gemini API key hay tài khoản. Thay đổi chỉ giữ trong phiên chạy, khởi động lại sẽ khôi phục dữ liệu mẫu. Chat/quiz dùng nội dung minh họa được ghi rõ, không gọi AI thật hoặc phân tích tài liệu.
+
+Để xem nhanh trên Chrome (đã có thư mục `web/`):
+
+```sh
+flutter pub get
+flutter run -d chrome
+```
+
+Trên thiết bị Android đã được cấu hình, chạy `flutter run -d ID_THIET_BI`. Không cần `config/dev.json` ở chế độ bản mẫu.
+
+Để dùng backend thật và luồng xác thực cũ, thêm `--dart-define=LIVE_BACKEND=true` cùng cấu hình Supabase như hướng dẫn bên dưới. Bản mẫu không thay đổi RLS hoặc cấp quyền truy cập dữ liệu thật khi chưa đăng nhập.
+
+**Thiết kế Figma mới:** file `GK-test-2` đã được cung cấp nhưng chưa đọc được trong phiên triển khai này. Phần hiện tại chỉ chuẩn bị chế độ xem không đăng nhập; chưa xác nhận màu sắc/bố cục khớp template mới.
+
 Sáu file Figma gốc được giữ nguyên trong `design_reference/`. Các file xuất từ Figma đều chứa `main()` riêng và dữ liệu minh họa; chúng không được import vào ứng dụng. `lib/presentation/` là các màn hình tích hợp nghiệp vụ, bố cục linh hoạt; chưa phải bản dựng khớp từng pixel của Figma.
 
 ## Các chức năng theo thứ tự triển khai
@@ -76,7 +93,7 @@ cp config/dev.example.json config/dev.json
 Điền URL dự án và **publishable/anon key** trong `config/dev.json` (file bị gitignore). Đây là thông tin phía client; RLS và JWT bảo vệ dữ liệu. Không điền service role key vào đây.
 
 ```sh
-flutter run --dart-define-from-file=config/dev.json
+flutter run --dart-define=LIVE_BACKEND=true --dart-define-from-file=config/dev.json
 ```
 
 Nếu dùng Android emulator với Supabase local, URL API thường là `http://10.0.2.2:54321`; thiết bị thật dùng địa chỉ LAN thích hợp. Chỉ khi phát triển với HTTP cục bộ, cần cấu hình Android debug network security cho cleartext; bản production dùng HTTPS. Callback trong config và Dashboard phải trùng nhau. Khi đổi URI scheme, cũng sửa manifest Android và Info.plist iOS tương ứng. Custom scheme phù hợp phát triển; production nên cấu hình App Links/Universal Links theo domain của ứng dụng.

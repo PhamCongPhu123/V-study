@@ -12,8 +12,9 @@ import 'statistics_page.dart';
 import 'widgets.dart';
 
 class VstudyApp extends StatelessWidget {
-  const VstudyApp({super.key, required this.useCases});
+  const VstudyApp({super.key, required this.useCases, this.preview = false});
   final VstudyUseCases useCases;
+  final bool preview;
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'Vstudy',
@@ -31,7 +32,9 @@ class VstudyApp extends StatelessWidget {
         border: OutlineInputBorder(),
       ),
     ),
-    home: _AuthGate(useCases: useCases),
+    home: preview
+        ? _MainShell(useCases: useCases, preview: true)
+        : _AuthGate(useCases: useCases),
   );
 }
 
@@ -426,8 +429,9 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
 }
 
 class _MainShell extends StatefulWidget {
-  const _MainShell({super.key, required this.useCases});
+  const _MainShell({super.key, required this.useCases, this.preview = false});
   final VstudyUseCases useCases;
+  final bool preview;
   @override
   State<_MainShell> createState() => _MainShellState();
 }
@@ -476,12 +480,29 @@ class _MainShellState extends State<_MainShell> {
           ][_index],
         ),
         actions: [
-          IconButton(
-            tooltip: 'Đăng xuất',
-            onPressed: _signingOut ? null : _signOut,
-            icon: const Icon(Icons.logout),
-          ),
+          if (widget.preview)
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Chip(label: Text('Bản mẫu UX/UI')),
+            )
+          else
+            IconButton(
+              tooltip: 'Đăng xuất',
+              onPressed: _signingOut ? null : _signOut,
+              icon: const Icon(Icons.logout),
+            ),
         ],
+        bottom: widget.preview
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(28),
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Dữ liệu minh họa · Thay đổi chỉ lưu trong phiên xem',
+                  ),
+                ),
+              )
+            : null,
       ),
       body: SafeArea(child: body),
       bottomNavigationBar: NavigationBar(

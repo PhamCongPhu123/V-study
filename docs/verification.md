@@ -17,3 +17,11 @@ Chưa thực hiện:
 PostgreSQL bootstrap dùng schema auth/storage tối thiểu để kiểm chứng SQL, không mô phỏng toàn bộ dịch vụ Supabase. Kết quả kiểm thử giả lập không đồng nghĩa ứng dụng đã chạy end-to-end trên thiết bị.
 
 Đã lưu bản nháp môi trường gồm `install_script` (cài công cụ kiểm thử), `start_skill` (lệnh kiểm tra và các bước còn thiếu), cùng custom network domains `storage.googleapis.com` và `generativelanguage.googleapis.com`. Lưu bản nháp không chạy script, không áp dụng mạng và không publish. Muốn dùng thay đổi này cho các phiên sau, xem lại và lưu trong Environment Settings rồi Publish. Không có khóa API nào được lưu trong bản nháp này.
+
+## Bản mẫu không đăng nhập cho bài UX/UI
+
+- Thêm repository dữ liệu minh họa trong bộ nhớ và mở thẳng năm tab ở entrypoint mặc định; Supabase chỉ được khởi tạo khi đặt `LIVE_BACKEND=true`.
+- Thêm web entrypoint để xem trên Chrome, không cần tạo runner hoặc nhập khóa.
+- Thêm 3 unit test cho trạng thái lịch, retry chấm quiz và chat minh họa, cùng 1 widget test mở entrypoint và điều hướng năm tab. Các test mới **chưa chạy** vì Flutter SDK vẫn chưa khả dụng.
+- Kiểm tra cú pháp 24 file Dart bằng parser Dart 3 và định dạng bằng dart_style WASM đạt; chưa thay thế được `flutter analyze`, `flutter test` hoặc chạy thiết bị.
+- Figma `GK-test-2` chưa truy cập được: kết nối plugin chưa cung cấp công cụ đọc thiết kế và HTTP trực tiếp bị mạng từ chối (403). Chưa thực hiện/kiểm chứng việc khớp thiết kế mới.

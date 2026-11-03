@@ -1,0 +1,10 @@
+{
+  "name": "Vstudy",
+  "short_name": "Vstudy",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F9F7F2",
+  "theme_color": "#1F2A44",
+  "description": "Bản mẫu trải nghiệm học tập Vstudy",
+  "prefer_related_applications": false
+}
