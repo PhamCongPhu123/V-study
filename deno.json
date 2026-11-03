@@ -1,0 +1,8 @@
+{
+  "compilerOptions": { "strict": true },
+  "tasks": {
+    "check": "deno check supabase/functions/ai-chat/index.ts supabase/functions/generate-quiz/index.ts",
+    "test": "deno test supabase/functions/tests"
+  },
+  "fmt": { "lineWidth": 100 }
+}
