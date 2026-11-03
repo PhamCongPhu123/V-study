@@ -6,6 +6,7 @@ import 'package:vstudy/domain/entities.dart';
 import 'package:vstudy/domain/repositories.dart';
 import 'package:vstudy/domain/use_cases.dart';
 import 'package:vstudy/presentation/app.dart';
+import 'package:vstudy/presentation/app_footer.dart';
 
 class _Auth implements AuthRepository {
   final users = StreamController<AppUser?>.broadcast();
@@ -101,7 +102,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(auth.registration, ['Nguyễn An', 'an@example.com', 'password123']);
       expect(find.textContaining('kiểm tra email'), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(VstudyFooter), findsNothing);
     },
   );
 
@@ -127,7 +128,7 @@ void main() {
       auth.user = const AppUser(id: 'old-user', email: 'old@example.com');
       await tester.pumpWidget(VstudyApp(useCases: useCases));
       await tester.pumpAndSettle();
-      final context = tester.element(find.byType(NavigationBar));
+      final context = tester.element(find.byType(VstudyFooter));
       Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (_) => const Scaffold(
@@ -144,7 +145,7 @@ void main() {
       auth.users.add(null);
       await tester.pumpAndSettle();
       expect(find.text('Previous account private conversation'), findsNothing);
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(VstudyFooter), findsNothing);
       expect(find.text('Đăng nhập'), findsWidgets);
     },
   );
@@ -155,7 +156,7 @@ void main() {
     auth.user = const AppUser(id: 'old-user', email: 'old@example.com');
     await tester.pumpWidget(VstudyApp(useCases: useCases));
     await tester.pumpAndSettle();
-    final context = tester.element(find.byType(NavigationBar));
+    final context = tester.element(find.byType(VstudyFooter));
     Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) =>
@@ -167,6 +168,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Previous conversation route'), findsNothing);
     expect(find.text('Đặt lại mật khẩu'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(VstudyFooter), findsNothing);
   });
 }

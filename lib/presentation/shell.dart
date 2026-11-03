@@ -1,0 +1,181 @@
+import 'package:flutter/material.dart';
+import '../domain/use_cases.dart';
+import 'ai_page.dart';
+import 'app_footer.dart';
+import 'calendar_page.dart';
+import 'design_system.dart';
+import 'home_page.dart';
+import 'statistics_page.dart';
+import 'widgets.dart';
+
+/// A navigator per tab keeps the footer visible even on pushed feature screens.
+class VstudyShell extends StatefulWidget {
+  const VstudyShell({super.key, required this.useCases, this.preview = false});
+  final VstudyUseCases useCases;
+  final bool preview;
+  @override
+  State<VstudyShell> createState() => _VstudyShellState();
+}
+
+class _VstudyShellState extends State<VstudyShell> {
+  final _navigators = List.generate(5, (_) => GlobalKey<NavigatorState>());
+  final _epochs = List.generate(5, (_) => ValueNotifier<int>(0));
+  final _canHandleBack = List.filled(5, false);
+  final _visited = <int>{2};
+  int _index = 2;
+
+  void _select(int index) {
+    final repeat = _index == index;
+    _navigators[index].currentState?.popUntil((route) => route.isFirst);
+    // Re-entering home/stats/docs reloads data written in other tabs. Calendar
+    // retains its selected day and view until explicitly reselected.
+    if (_visited.contains(index) && (index != 0 || repeat)) {
+      _epochs[index].value++;
+    }
+    setState(() {
+      _visited.add(index);
+      _index = index;
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final epoch in _epochs) {
+      epoch.dispose();
+    }
+    super.dispose();
+  }
+
+  Widget _page(int index) => switch (index) {
+    0 => CalendarPage(useCases: widget.useCases),
+    1 => _FeatureFrame(
+      title: 'Hỏi đáp',
+      preview: widget.preview,
+      useCases: widget.useCases,
+      child: AiPage(useCases: widget.useCases),
+    ),
+    2 => HomePage(useCases: widget.useCases, onNavigate: _select),
+    3 => _FeatureFrame(
+      title: 'Thống kê học tập',
+      preview: widget.preview,
+      useCases: widget.useCases,
+      child: StatisticsPage(useCases: widget.useCases),
+    ),
+    _ => DocumentsPage(useCases: widget.useCases),
+  };
+
+  Widget _tab(int index) {
+    if (!_visited.contains(index)) {
+      return const SizedBox.shrink();
+    }
+    return NotificationListener<NavigationNotification>(
+      onNotification: (notification) {
+        if (_canHandleBack[index] != notification.canHandlePop) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() => _canHandleBack[index] = notification.canHandlePop);
+            }
+          });
+        }
+        return true;
+      },
+      child: Navigator(
+        key: _navigators[index],
+        onGenerateRoute: (_) => MaterialPageRoute<void>(
+          builder: (_) => ValueListenableBuilder<int>(
+            valueListenable: _epochs[index],
+            builder: (_, epoch, _) => KeyedSubtree(
+              key: ValueKey('$index-$epoch'),
+              child: _page(index),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope<Object?>(
+    canPop: _index == 2 && !_canHandleBack[_index],
+    onPopInvokedWithResult: (didPop, result) {
+      if (didPop) {
+        return;
+      }
+      if (_canHandleBack[_index]) {
+        _navigators[_index].currentState?.maybePop(result);
+      } else if (_index != 2) {
+        _select(2);
+      }
+    },
+    child: Scaffold(
+      body: DecoratedBox(
+        decoration: const BoxDecoration(gradient: VstudyColors.background),
+        child: SafeArea(
+          bottom: false,
+          child: IndexedStack(index: _index, children: List.generate(5, _tab)),
+        ),
+      ),
+      bottomNavigationBar: VstudyFooter(
+        selectedIndex: _index,
+        onSelected: _select,
+      ),
+      floatingActionButton:
+          (_index == 0 || _index == 2) && !_canHandleBack[_index]
+          ? FloatingActionButton.small(
+              key: const ValueKey('open-ai'),
+              tooltip: 'Hỏi trợ lý V-study',
+              onPressed: () => _select(1),
+              child: const Icon(Icons.auto_awesome),
+            )
+          : null,
+    ),
+  );
+}
+
+class _FeatureFrame extends StatelessWidget {
+  const _FeatureFrame({
+    required this.title,
+    required this.child,
+    required this.preview,
+    required this.useCases,
+  });
+  final String title;
+  final Widget child;
+  final bool preview;
+  final VstudyUseCases useCases;
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            if (!preview)
+              IconButton(
+                tooltip: 'Đăng xuất',
+                icon: const Icon(Icons.logout),
+                onPressed: () async {
+                  try {
+                    await useCases.auth.signOut();
+                  } catch (error) {
+                    if (context.mounted) {
+                      showError(context, error);
+                    }
+                  }
+                },
+              ),
+          ],
+        ),
+      ),
+      Expanded(child: child),
+    ],
+  );
+}

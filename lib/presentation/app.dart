@@ -4,34 +4,22 @@ import 'package:flutter/material.dart';
 
 import '../domain/entities.dart';
 import '../domain/use_cases.dart';
-import 'ai_page.dart';
-import 'calendar_page.dart';
-import 'home_page.dart';
-import 'quiz_page.dart';
-import 'statistics_page.dart';
+import 'design_system.dart';
+import 'shell.dart';
 import 'widgets.dart';
 
 class VstudyApp extends StatelessWidget {
-  const VstudyApp({super.key, required this.useCases});
+  const VstudyApp({super.key, required this.useCases, this.preview = false});
   final VstudyUseCases useCases;
+  final bool preview;
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'Vstudy',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFFC9A227),
-        primary: const Color(0xFF1F2A44),
-        secondary: const Color(0xFFC9A227),
-        surface: const Color(0xFFF9F7F2),
-      ),
-      scaffoldBackgroundColor: const Color(0xFFF9F7F2),
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
-      ),
-    ),
-    home: _AuthGate(useCases: useCases),
+    theme: vstudyTheme(),
+    home: preview
+        ? VstudyShell(useCases: useCases, preview: true)
+        : _AuthGate(useCases: useCases),
   );
 }
 
@@ -118,7 +106,7 @@ class _AuthGateState extends State<_AuthGate> {
     if (_user == null) {
       return AuthPage(useCases: widget.useCases);
     }
-    return _MainShell(key: ValueKey(_user!.id), useCases: widget.useCases);
+    return VstudyShell(key: ValueKey(_user!.id), useCases: widget.useCases);
   }
 }
 
@@ -423,90 +411,4 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
       ],
     ),
   );
-}
-
-class _MainShell extends StatefulWidget {
-  const _MainShell({super.key, required this.useCases});
-  final VstudyUseCases useCases;
-  @override
-  State<_MainShell> createState() => _MainShellState();
-}
-
-class _MainShellState extends State<_MainShell> {
-  int _index = 0;
-  bool _signingOut = false;
-  Future<void> _signOut() async {
-    setState(() => _signingOut = true);
-    try {
-      await widget.useCases.auth.signOut();
-    } catch (error) {
-      if (mounted) {
-        showError(context, error);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _signingOut = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final u = widget.useCases;
-    // Recreate a tab when selected so home/statistics reflect newly recorded data.
-    final body = switch (_index) {
-      0 => HomePage(
-        useCases: u,
-        onNavigate: (index) => setState(() => _index = index),
-      ),
-      1 => CalendarPage(useCases: u),
-      2 => QuizPage(useCases: u),
-      3 => AiPage(useCases: u),
-      _ => StatisticsPage(useCases: u),
-    };
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          [
-            'Trang chủ',
-            'Lịch học',
-            'Quiz',
-            'Trợ lý Vstudy',
-            'Thống kê',
-          ][_index],
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Đăng xuất',
-            onPressed: _signingOut ? null : _signOut,
-            icon: const Icon(Icons.logout),
-          ),
-        ],
-      ),
-      body: SafeArea(child: body),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            label: 'Trang chủ',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            label: 'Lịch',
-          ),
-          NavigationDestination(icon: Icon(Icons.quiz_outlined), label: 'Quiz'),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            label: 'AI',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            label: 'Thống kê',
-          ),
-        ],
-      ),
-    );
-  }
 }

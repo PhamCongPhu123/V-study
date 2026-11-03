@@ -65,7 +65,7 @@ class _AiPageState extends State<AiPage> {
     await Navigator.push<void>(
       context,
       MaterialPageRoute(
-        builder: (_) => _DocumentsPage(useCases: widget.useCases),
+        builder: (_) => DocumentsPage(useCases: widget.useCases),
       ),
     );
     if (mounted) {
@@ -416,14 +416,14 @@ class _ConversationPageState extends State<_ConversationPage> {
   );
 }
 
-class _DocumentsPage extends StatefulWidget {
-  const _DocumentsPage({required this.useCases});
+class DocumentsPage extends StatefulWidget {
+  const DocumentsPage({super.key, required this.useCases});
   final VstudyUseCases useCases;
   @override
-  State<_DocumentsPage> createState() => _DocumentsPageState();
+  State<DocumentsPage> createState() => _DocumentsPageState();
 }
 
-class _DocumentsPageState extends State<_DocumentsPage> {
+class _DocumentsPageState extends State<DocumentsPage> {
   late Future<List<StudyDocument>> _future;
   bool _busy = false;
   @override

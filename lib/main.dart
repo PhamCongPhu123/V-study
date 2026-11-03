@@ -5,11 +5,18 @@ import 'data/study_repository.dart';
 import 'data/document_repository.dart';
 import 'data/quiz_repository.dart';
 import 'data/assistant_repository.dart';
+import 'data/preview_repository.dart';
 import 'domain/use_cases.dart';
 import 'presentation/app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  const liveBackend = bool.fromEnvironment('LIVE_BACKEND', defaultValue: false);
+  if (!liveBackend) {
+    final preview = PreviewRepository();
+    runApp(VstudyApp(useCases: preview.useCases, preview: true));
+    return;
+  }
   const url = String.fromEnvironment('SUPABASE_URL');
   const key = String.fromEnvironment('SUPABASE_ANON_KEY');
   const redirect = String.fromEnvironment(

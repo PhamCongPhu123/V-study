@@ -2,6 +2,25 @@
 
 Ứng dụng Flutter hỗ trợ học tập, tổ chức theo **Clean Architecture**, dùng **Supabase** (Auth, PostgreSQL, Storage, Edge Functions) và **Gemini API** ở phía máy chủ.
 
+## Giao diện trên nhánh android-working
+
+Trang chủ và lịch được chỉnh theo ảnh mẫu mới: nền kem/vàng nhạt, thẻ mục tiêu navy với vòng tiến độ vàng, các thẻ Quiz/Tài liệu, biểu đồ tuần và lịch ngày/tuần/tháng.
+
+Footer chung có thứ tự **Lịch → Hỏi đáp → Trang chủ → Thống kê → Tài liệu**; biểu tượng ngôi nhà nằm giữa và mở Trang chủ. Footer cũng giữ nguyên khi mở quiz, hội thoại hay tài liệu trong từng tab. Chạm lại biểu tượng tab sẽ trở về trang đầu của tab đó. Nút Back Android đóng trang con trước, rồi trở về Trang chủ khi đang ở tab khác.
+
+Mặc định mở bản mẫu không cần đăng nhập hoặc khóa Supabase. Dữ liệu minh họa chỉ lưu trong phiên chạy; phần chat/quiz mô phỏng được ghi rõ là minh họa.
+
+Để chạy trong Android Studio: chọn `lib/main.dart`, chọn thiết bị Android và bấm Run. Hoặc dùng Terminal:
+
+```sh
+flutter pub get
+flutter run -d ID_THIET_BI
+```
+
+Nhánh này đã có runner Android/iOS/web do người dùng thêm, không cần tạo lại. Muốn dùng backend thật và xác thực, chạy với `--dart-define=LIVE_BACKEND=true --dart-define-from-file=config/dev.json`.
+
+Chi tiết xác minh: [giao diện và điều hướng](docs/ui-redesign-verification.md). Flutter SDK chưa chạy được trong máy đám mây; chưa xác nhận widget test/build hoặc so ảnh trên thiết bị. Avatar và biểu tượng dùng icon Flutter vì ảnh gốc/font Figma chưa được cung cấp.
+
 Sáu file Figma gốc được giữ nguyên trong `design_reference/`. Các file xuất từ Figma đều chứa `main()` riêng và dữ liệu minh họa; chúng không được import vào ứng dụng. `lib/presentation/` là các màn hình tích hợp nghiệp vụ, bố cục linh hoạt; chưa phải bản dựng khớp từng pixel của Figma.
 
 ## Các chức năng theo thứ tự triển khai
@@ -66,7 +85,7 @@ supabase functions deploy generate-quiz
 
 ## Chạy Flutter
 
-Repository ban đầu trống và chỉ nhận các file thiết kế Dart, nên chưa có runner Android/iOS. Script tạo **chỉ các thư mục runner còn thiếu**, giữ nguyên mã ứng dụng và thêm callback auth/Internet permission:
+Nhánh `android-working` đã có runner Android/iOS/web. Script bên dưới chỉ cần dùng khi thiếu runner hoặc muốn đồng bộ cấu hình callback; giữ nguyên mã ứng dụng và các thư mục runner đang có:
 
 ```sh
 bash scripts/bootstrap_flutter.sh
@@ -76,7 +95,7 @@ cp config/dev.example.json config/dev.json
 Điền URL dự án và **publishable/anon key** trong `config/dev.json` (file bị gitignore). Đây là thông tin phía client; RLS và JWT bảo vệ dữ liệu. Không điền service role key vào đây.
 
 ```sh
-flutter run --dart-define-from-file=config/dev.json
+flutter run --dart-define=LIVE_BACKEND=true --dart-define-from-file=config/dev.json
 ```
 
 Nếu dùng Android emulator với Supabase local, URL API thường là `http://10.0.2.2:54321`; thiết bị thật dùng địa chỉ LAN thích hợp. Chỉ khi phát triển với HTTP cục bộ, cần cấu hình Android debug network security cho cleartext; bản production dùng HTTPS. Callback trong config và Dashboard phải trùng nhau. Khi đổi URI scheme, cũng sửa manifest Android và Info.plist iOS tương ứng. Custom scheme phù hợp phát triển; production nên cấu hình App Links/Universal Links theo domain của ứng dụng.

@@ -1,16 +1,17 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../domain/entities.dart';
 import '../domain/use_cases.dart';
+import 'design_system.dart';
 import 'widgets.dart' show errorMessage;
 
-/// Calendar uses local day boundaries; the data adapter serializes UTC for SQL.
+/// Real local calendar dates; data adapters handle UTC serialization.
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key, required this.useCases});
-
   final VstudyUseCases useCases;
-
   @override
   State<CalendarPage> createState() => _CalendarPageState();
 }
@@ -21,6 +22,7 @@ class _CalendarPageState extends State<CalendarPage> {
   DateTime _selected = DateTime.now();
   _CalendarRange _range = _CalendarRange.day;
   late Future<List<StudyEvent>> _events;
+  final _timelineScroll = ScrollController();
   bool _mutating = false;
 
   @override
@@ -29,70 +31,85 @@ class _CalendarPageState extends State<CalendarPage> {
     _events = _load();
   }
 
+  @override
+  void dispose() {
+    _timelineScroll.dispose();
+    super.dispose();
+  }
+
+  DateTime _day(DateTime value) => DateTime(value.year, value.month, value.day);
+  DateTime _nextDay(DateTime value) =>
+      DateTime(value.year, value.month, value.day + 1);
+  DateTime get _weekStart => DateTime(
+    _selected.year,
+    _selected.month,
+    _selected.day - _selected.weekday + 1,
+  );
+
   (DateTime, DateTime) get _bounds {
-    final day = DateTime(_selected.year, _selected.month, _selected.day);
-    switch (_range) {
-      case _CalendarRange.day:
-        return (day, DateTime(day.year, day.month, day.day + 1));
-      case _CalendarRange.week:
-        final from = DateTime(day.year, day.month, day.day - day.weekday + 1);
-        return (from, DateTime(from.year, from.month, from.day + 7));
-      case _CalendarRange.month:
-        return (
-          DateTime(day.year, day.month),
-          DateTime(day.year, day.month + 1),
-        );
+    if (_range == _CalendarRange.month) {
+      final first = DateTime(_selected.year, _selected.month);
+      final start = DateTime(
+        first.year,
+        first.month,
+        first.day - first.weekday + 1,
+      );
+      return (start, DateTime(start.year, start.month, start.day + 42));
     }
+    // The full week also supplies markers in the day selector.
+    final start = _weekStart;
+    return (start, DateTime(start.year, start.month, start.day + 7));
   }
 
-  Future<List<StudyEvent>> _load() {
-    final (from, to) = _bounds;
-    return widget.useCases.study.listEvents(from, to);
-  }
+  Future<List<StudyEvent>> _load() =>
+      widget.useCases.study.listEvents(_bounds.$1, _bounds.$2);
+  void _refresh() => setState(() => _events = _load());
 
-  void _refresh() {
-    setState(() => _events = _load());
-  }
-
-  void _move(int delta) {
+  void _selectDate(DateTime value) {
     setState(() {
-      _selected = switch (_range) {
-        _CalendarRange.day => DateTime(
-          _selected.year,
-          _selected.month,
-          _selected.day + delta,
-        ),
-        _CalendarRange.week => DateTime(
-          _selected.year,
-          _selected.month,
-          _selected.day + 7 * delta,
-        ),
-        _CalendarRange.month => DateTime(
-          _selected.year,
-          _selected.month + delta,
-        ),
-      };
+      _selected = _day(value);
       _events = _load();
     });
   }
 
+  void _move(int delta) {
+    if (_range == _CalendarRange.month) {
+      final lastDay = DateTime(
+        _selected.year,
+        _selected.month + delta + 1,
+        0,
+      ).day;
+      _selectDate(
+        DateTime(
+          _selected.year,
+          _selected.month + delta,
+          math.min(_selected.day, lastDay),
+        ),
+      );
+    } else {
+      _selectDate(
+        DateTime(
+          _selected.year,
+          _selected.month,
+          _selected.day + delta * (_range == _CalendarRange.week ? 7 : 1),
+        ),
+      );
+    }
+  }
+
   Future<void> _chooseDate() async {
-    final chosen = await showDatePicker(
+    final value = await showDatePicker(
       context: context,
       initialDate: _selected,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100, 12, 31),
     );
-    if (chosen == null || !mounted) {
-      return;
+    if (value != null && mounted) {
+      _selectDate(value);
     }
-    setState(() {
-      _selected = chosen;
-      _events = _load();
-    });
   }
 
-  Future<void> _edit([StudyEvent? existing]) async {
+  Future<void> _edit([StudyEvent? event]) async {
     if (_mutating) {
       return;
     }
@@ -107,9 +124,9 @@ class _CalendarPageState extends State<CalendarPage> {
         barrierDismissible: false,
         builder: (_) => _EventEditor(
           useCases: widget.useCases,
-          existing: existing,
           subjects: subjects,
           selectedDay: _selected,
+          existing: event,
         ),
       );
       if (mounted && changed == true) {
@@ -125,39 +142,11 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   void _showError(Object error) {
-    if (!mounted) {
-      return;
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage(error))));
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(errorMessage(error))));
-  }
-
-  Future<void> _delete(StudyEvent event) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Xóa buổi học?'),
-        content: Text(
-          'Xóa “${event.title}” và checklist của buổi này? '
-          'Các buổi lặp lại khác vẫn được giữ.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xóa'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) {
-      return;
-    }
-    await _runMutation(() => widget.useCases.study.deleteEvent(event.id));
   }
 
   Future<void> _runMutation(Future<void> Function() action) async {
@@ -179,190 +168,879 @@ class _CalendarPageState extends State<CalendarPage> {
     }
   }
 
+  Future<void> _delete(StudyEvent event) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa buổi học?'),
+        content: Text(
+          'Xóa “${event.title}” và checklist của buổi này? Các buổi lặp lại khác vẫn được giữ.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await _runMutation(() => widget.useCases.study.deleteEvent(event.id));
+    }
+  }
+
+  Future<void> _details(StudyEvent event) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: VstudyColors.paper,
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Chi tiết buổi học',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _eventColor(event),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(_kindLabel(event.kind)),
+                    Text(
+                      '${DateFormat('dd/MM/yyyy HH:mm').format(event.startsAt.toLocal())} – ${DateFormat('dd/MM/yyyy HH:mm').format(event.endsAt.toLocal())}',
+                    ),
+                    if (event.location.isNotEmpty)
+                      Text('Địa điểm: ${event.location}'),
+                  ],
+                ),
+              ),
+              if (event.notes.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(event.notes),
+                ),
+              if (event.seriesId != null)
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: Text('Thuộc chuỗi lịch hằng tuần'),
+                ),
+              if (event.reminderMinutes != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    'Nhắc trước ${event.reminderMinutes} phút · đã lưu cài đặt, chưa gửi thông báo thiết bị',
+                  ),
+                ),
+              if (event.tasks.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  'Việc cần chuẩn bị',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                ...event.tasks.map(
+                  (task) => CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: Text(task.title),
+                    value: task.isCompleted,
+                    onChanged: _mutating
+                        ? null
+                        : (checked) {
+                            Navigator.pop(sheetContext);
+                            _runMutation(
+                              () => widget.useCases.study.setTaskCompleted(
+                                task.id,
+                                checked ?? false,
+                              ),
+                            );
+                          },
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.pop(sheetContext, 'delete'),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Xóa buổi học'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.pop(sheetContext, 'edit'),
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Sửa'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    if (action == 'edit') {
+      await _edit(event);
+    }
+    if (action == 'delete') {
+      await _delete(event);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
-    final label = switch (_range) {
-      _CalendarRange.day => DateFormat('dd/MM/yyyy').format(_selected),
-      _CalendarRange.week =>
-        '${DateFormat('dd/MM').format(_bounds.$1)} – '
-            '${DateFormat('dd/MM/yyyy').format(_bounds.$2.subtract(const Duration(days: 1)))}',
-      _CalendarRange.month => DateFormat('MM/yyyy').format(_selected),
-    };
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          crossAxisAlignment: WrapCrossAlignment.center,
+  Widget build(BuildContext context) => Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Thời gian biểu',
-              style: Theme.of(context).textTheme.headlineSmall,
+              'Tháng ${_selected.month}, ${_selected.year}',
+              style: const TextStyle(fontSize: 11, color: VstudyColors.muted),
             ),
-            FilledButton.icon(
-              onPressed: _mutating ? null : _edit,
-              icon: const Icon(Icons.add),
-              label: const Text('Thêm lịch'),
+            const SizedBox(height: 3),
+            LayoutBuilder(
+              builder: (context, constraints) => Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Thời gian biểu',
+                      style: TextStyle(
+                        color: VstudyColors.navy,
+                        fontSize: constraints.maxWidth < 330 ? 20 : 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  if (constraints.maxWidth >= 330)
+                    IconButton(
+                      tooltip: 'Tải lại lịch',
+                      onPressed: _mutating ? null : _refresh,
+                      icon: const Icon(Icons.refresh, size: 19),
+                    ),
+                  FilledButton.icon(
+                    onPressed: _mutating ? null : _edit,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: VstudyColors.navy,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      minimumSize: const Size(82, 38),
+                      shape: const StadiumBorder(),
+                    ),
+                    icon: const Icon(Icons.add, size: 17),
+                    label: const Text('Thêm'),
+                  ),
+                ],
+              ),
             ),
-            IconButton(
-              tooltip: 'Tải lại',
-              onPressed: _mutating ? null : _refresh,
-              icon: const Icon(Icons.refresh),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE1DFDA),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Row(
+                children: _CalendarRange.values.map((range) {
+                  final selected = _range == range;
+                  final label = switch (range) {
+                    _CalendarRange.day => 'Ngày',
+                    _CalendarRange.week => 'Tuần',
+                    _CalendarRange.month => 'Tháng',
+                  };
+                  return Expanded(
+                    child: Semantics(
+                      selected: selected,
+                      button: true,
+                      child: InkWell(
+                        key: ValueKey('calendar-view-${range.name}'),
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => setState(() {
+                          _range = range;
+                          _events = _load();
+                        }),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? VstudyColors.navy
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              color: selected
+                                  ? Colors.white
+                                  : VstudyColors.navy,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        SegmentedButton<_CalendarRange>(
-          segments: const [
-            ButtonSegment(value: _CalendarRange.day, label: Text('Ngày')),
-            ButtonSegment(value: _CalendarRange.week, label: Text('Tuần')),
-            ButtonSegment(value: _CalendarRange.month, label: Text('Tháng')),
-          ],
-          selected: {_range},
-          onSelectionChanged: (selection) {
-            setState(() {
-              _range = selection.first;
-              _events = _load();
-            });
-          },
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              tooltip: 'Trước',
-              onPressed: () => _move(-1),
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Flexible(
-              child: TextButton(onPressed: _chooseDate, child: Text(label)),
-            ),
-            IconButton(
-              tooltip: 'Sau',
-              onPressed: () => _move(1),
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        ),
-        if (_mutating) const LinearProgressIndicator(),
-        FutureBuilder<List<StudyEvent>>(
+      ),
+      if (_mutating) const LinearProgressIndicator(minHeight: 2),
+      Expanded(
+        child: FutureBuilder<List<StudyEvent>>(
           future: _events,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              );
+              return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              return Column(
-                children: [
-                  Text(errorMessage(snapshot.error!)),
-                  TextButton(onPressed: _refresh, child: const Text('Thử lại')),
-                ],
-              );
-            }
-            final events = snapshot.data ?? const [];
-            if (events.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'Chưa có lịch trong khoảng này. Hãy thêm buổi học hoặc deadline.',
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(errorMessage(snapshot.error!)),
+                      TextButton(
+                        onPressed: _refresh,
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
-            return Column(children: events.map(_eventCard).toList());
+            final events = snapshot.data ?? const <StudyEvent>[];
+            return _range == _CalendarRange.month
+                ? _monthView(events)
+                : _timeView(events);
           },
         ),
+      ),
+    ],
+  );
+
+  Widget _dateNavigation({bool month = false}) => Row(
+    children: [
+      IconButton(
+        tooltip: month ? 'Tháng trước' : 'Khoảng trước',
+        onPressed: () => _move(-1),
+        icon: const Icon(Icons.chevron_left, size: 20),
+      ),
+      Expanded(
+        child: TextButton(
+          onPressed: _chooseDate,
+          child: Text(
+            month
+                ? 'Tháng ${_selected.month}, ${_selected.year}'
+                : _range == _CalendarRange.week
+                ? '${DateFormat('dd/MM').format(_weekStart)} – ${DateFormat('dd/MM').format(DateTime(_weekStart.year, _weekStart.month, _weekStart.day + 6))}'
+                : '${_weekday(_selected)}, ${DateFormat('dd/MM').format(_selected)}',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: VstudyColors.navy,
+            ),
+          ),
+        ),
+      ),
+      IconButton(
+        tooltip: month ? 'Tháng sau' : 'Khoảng sau',
+        onPressed: () => _move(1),
+        icon: const Icon(Icons.chevron_right, size: 20),
+      ),
+    ],
+  );
+
+  Widget _weekStrip(List<StudyEvent> events) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Row(
+      children: List.generate(7, (index) {
+        final date = DateTime(
+          _weekStart.year,
+          _weekStart.month,
+          _weekStart.day + index,
+        );
+        final selected = _day(date) == _day(_selected);
+        final hasDeadline = _forDay(
+          events,
+          date,
+        ).any((e) => e.kind == EventKind.deadline);
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Semantics(
+              label:
+                  '${_weekday(date)}, ${DateFormat('dd/MM/yyyy').format(date)}',
+              selected: selected,
+              button: true,
+              child: InkWell(
+                onTap: () => _selectDate(date),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? VstudyColors.navy
+                        : const Color(0xFFE1E5EE),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        _weekdays[index],
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: selected ? Colors.white : VstudyColors.navy,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${date.day}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: selected ? Colors.white : VstudyColors.navy,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 3,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: hasDeadline
+                              ? VstudyColors.red
+                              : Colors.transparent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }),
+    ),
+  );
+
+  Widget _timeView(List<StudyEvent> events) {
+    final days = _range == _CalendarRange.week
+        ? List.generate(
+            7,
+            (i) =>
+                DateTime(_weekStart.year, _weekStart.month, _weekStart.day + i),
+          )
+        : [_day(_selected)];
+    final selectedEvents = _forDay(events, _selected);
+    final remaining = selectedEvents
+        .where(
+          (e) =>
+              e.kind == EventKind.selfStudy && e.endsAt.isAfter(DateTime.now()),
+        )
+        .length;
+    return Column(
+      children: [
+        _weekStrip(events),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: _dateNavigation(),
+        ),
+        if (_range == _CalendarRange.day)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Còn $remaining buổi tự học',
+                style: const TextStyle(color: VstudyColors.muted, fontSize: 11),
+              ),
+            ),
+          ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final rowHeight = ((constraints.maxHeight - 16) / 24)
+                  .clamp(24.0, 40.0)
+                  .toDouble();
+              const labelWidth = 42.0;
+              final contentWidth = math.max(
+                0.0,
+                constraints.maxWidth - labelWidth - 30,
+              );
+              final columnWidth = contentWidth / days.length;
+              return SingleChildScrollView(
+                controller: _timelineScroll,
+                padding: const EdgeInsets.fromLTRB(14, 6, 16, 18),
+                child: SizedBox(
+                  height: 24 * rowHeight + 16,
+                  child: Stack(
+                    children: [
+                      for (var hour = 0; hour <= 24; hour++) ...[
+                        Positioned(
+                          top: hour * rowHeight,
+                          left: 0,
+                          width: labelWidth - 6,
+                          child: Text(
+                            '${hour.toString().padLeft(2, '0')}:00',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: VstudyColors.muted,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: hour * rowHeight + 5,
+                          left: labelWidth,
+                          right: 0,
+                          child: Container(
+                            height: 1,
+                            color: const Color(0xFFD7D5CF),
+                          ),
+                        ),
+                      ],
+                      if (days.length > 1)
+                        for (var i = 1; i < days.length; i++)
+                          Positioned(
+                            left: labelWidth + i * columnWidth,
+                            top: 5,
+                            bottom: 12,
+                            child: Container(
+                              width: 1,
+                              color: const Color(0xFFE6E3DB),
+                            ),
+                          ),
+                      for (var column = 0; column < days.length; column++)
+                        ..._timelineBlocks(
+                          events,
+                          days[column],
+                          column,
+                          columnWidth,
+                          labelWidth,
+                          rowHeight,
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        _legend(),
       ],
     );
   }
 
-  Widget _eventCard(StudyEvent event) {
-    final starts = event.startsAt.toLocal();
-    final ends = event.endsAt.toLocal();
-    final dateFormat = DateFormat('dd/MM HH:mm');
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(switch (event.kind) {
-                  EventKind.classSession => Icons.school_outlined,
-                  EventKind.selfStudy => Icons.menu_book_outlined,
-                  EventKind.deadline => Icons.flag_outlined,
-                }),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    event.title,
-                    style: Theme.of(context).textTheme.titleMedium,
+  List<Widget> _timelineBlocks(
+    List<StudyEvent> events,
+    DateTime date,
+    int column,
+    double columnWidth,
+    double labelWidth,
+    double rowHeight,
+  ) {
+    final dayEvents = _forDay(events, date)
+      ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+    final placements = <_EventPlacement>[];
+    var group = <_EventPlacement>[];
+    var groupEnd = -1.0;
+    var groupColumns = 1;
+    void finishGroup() {
+      for (final placement in group) placement.columns = groupColumns;
+      group = [];
+      groupColumns = 1;
+      groupEnd = -1;
+    }
+
+    for (final event in dayEvents) {
+      final start = _wallMinute(event.startsAt, date);
+      final end = _wallMinute(event.endsAt, date);
+      final visibleEnd = math.min(
+        1440.0,
+        math.max(end, start + (daysAreNarrow ? 28 : 60)),
+      );
+      if (start >= groupEnd) {
+        finishGroup();
+      }
+      var lane = 0;
+      while (group.any((item) => item.lane == lane && item.end > start)) lane++;
+      groupColumns = math.max(groupColumns, lane + 1);
+      final placement = _EventPlacement(event, start, visibleEnd, lane);
+      group.add(placement);
+      placements.add(placement);
+      groupEnd = math.max(groupEnd, visibleEnd);
+    }
+    finishGroup();
+    return placements.map((placement) {
+      final width = math.max(1.0, columnWidth / placement.columns - 5);
+      final height = math.max(
+        10.0,
+        (placement.end - placement.start) / 60 * rowHeight - 3,
+      );
+      final event = placement.event;
+      return Positioned(
+        top: placement.start / 60 * rowHeight + 5,
+        left:
+            labelWidth +
+            column * columnWidth +
+            placement.lane * columnWidth / placement.columns +
+            2,
+        width: width,
+        height: height,
+        child: Semantics(
+          label:
+              '${event.title}, ${_kindLabel(event.kind)}, ${DateFormat('HH:mm').format(event.startsAt.toLocal())}',
+          button: true,
+          child: Tooltip(
+            message: event.title,
+            child: Material(
+              color: _eventColor(event),
+              elevation: 1,
+              shadowColor: VstudyColors.navy.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(daysAreNarrow ? 5 : 14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(daysAreNarrow ? 5 : 14),
+                onTap: _mutating ? null : () => _details(event),
+                child: ClipRect(
+                  child: Padding(
+                    padding: EdgeInsets.all(daysAreNarrow ? 3 : 6),
+                    child: width < 68 || height < 25
+                        ? const SizedBox.shrink()
+                        : SingleChildScrollView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  event.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    height: 1.15,
+                                    fontWeight: FontWeight.w800,
+                                    color: VstudyColors.navy,
+                                  ),
+                                ),
+                                if (height >= 39) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${DateFormat('HH:mm').format(event.startsAt.toLocal())} – ${DateFormat('HH:mm').format(event.endsAt.toLocal())}'
+                                    '${event.location.isEmpty ? '' : ' · ${event.location}'}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      height: 1.15,
+                                      color: VstudyColors.navy,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Sửa buổi này',
-                  onPressed: _mutating ? null : () => _edit(event),
-                  icon: const Icon(Icons.edit_outlined),
-                ),
-                IconButton(
-                  tooltip: 'Xóa buổi này',
-                  onPressed: _mutating ? null : () => _delete(event),
-                  icon: const Icon(Icons.delete_outline),
-                ),
-              ],
+              ),
             ),
-            Text(_kindLabel(event.kind)),
-            const SizedBox(height: 4),
-            Text('${dateFormat.format(starts)} – ${dateFormat.format(ends)}'),
-            if (event.location.isNotEmpty) Text('Địa điểm: ${event.location}'),
-            if (event.notes.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(event.notes),
-              ),
-            if (event.seriesId != null)
-              const Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: Text('Thuộc chuỗi lịch hằng tuần'),
-              ),
-            if (event.reminderMinutes != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Nhắc trước: ${event.reminderMinutes} phút (chỉ lưu cài đặt)',
-                ),
-              ),
-            if (event.tasks.isNotEmpty) ...[
-              const Divider(),
-              const Text('Việc cần chuẩn bị'),
-              ...event.tasks.map(
-                (task) => CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  title: Text(task.title),
-                  value: task.isCompleted,
-                  onChanged: _mutating
-                      ? null
-                      : (checked) => _runMutation(
-                          () => widget.useCases.study.setTaskCompleted(
-                            task.id,
-                            checked ?? false,
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
-      ),
+      );
+    }).toList();
+  }
+
+  bool get daysAreNarrow => _range == _CalendarRange.week;
+  double _wallMinute(DateTime value, DateTime date) {
+    final local = value.toLocal();
+    if (local.isBefore(_day(date))) {
+      return 0;
+    }
+    if (!local.isBefore(_nextDay(date))) {
+      return 1440;
+    }
+    return (local.hour * 60 + local.minute).toDouble();
+  }
+
+  Widget _monthView(List<StudyEvent> events) {
+    final monthFirst = DateTime(_selected.year, _selected.month);
+    final gridStart = DateTime(
+      monthFirst.year,
+      monthFirst.month,
+      2 - monthFirst.weekday,
+    );
+    final selectedEvents = _forDay(events, _selected);
+    final selfStudy = selectedEvents
+        .where((e) => e.kind == EventKind.selfStudy)
+        .length;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      children: [
+        _dateNavigation(month: true),
+        const SizedBox(height: 14),
+        Row(
+          children: _weekdays
+              .map(
+                (label) => Expanded(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: VstudyColors.navy,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cellWidth = constraints.maxWidth / 7;
+            return Wrap(
+              children: List.generate(42, (index) {
+                final date = DateTime(
+                  gridStart.year,
+                  gridStart.month,
+                  gridStart.day + index,
+                );
+                final selected = _day(date) == _day(_selected);
+                final today = _day(date) == _day(DateTime.now());
+                final inMonth = date.month == _selected.month;
+                final deadline = _forDay(
+                  events,
+                  date,
+                ).any((e) => e.kind == EventKind.deadline);
+                return SizedBox(
+                  width: cellWidth,
+                  height: 44,
+                  child: Semantics(
+                    label:
+                        '${_weekday(date)}, ${DateFormat('dd/MM/yyyy').format(date)}',
+                    selected: selected,
+                    button: true,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () => _selectDate(date),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 29,
+                            height: 29,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: selected
+                                  ? VstudyColors.navy
+                                  : Colors.transparent,
+                              border: today && !selected
+                                  ? Border.all(color: VstudyColors.gold)
+                                  : null,
+                            ),
+                            child: Text(
+                              '${date.day}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: selected || today
+                                    ? FontWeight.w800
+                                    : FontWeight.w500,
+                                color: selected
+                                    ? Colors.white
+                                    : inMonth
+                                    ? VstudyColors.navy
+                                    : const Color(0xFFB8B6B0),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 3,
+                            height: 3,
+                            margin: const EdgeInsets.only(top: 3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: deadline
+                                  ? VstudyColors.red
+                                  : Colors.transparent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            );
+          },
+        ),
+        const SizedBox(height: 14),
+        Text(
+          '${_weekday(_selected)}, ${DateFormat('dd/MM').format(_selected)}',
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 14,
+            color: VstudyColors.navy,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Còn $selfStudy buổi tự học',
+          style: const TextStyle(fontSize: 11, color: VstudyColors.muted),
+        ),
+        const SizedBox(height: 12),
+        if (selectedEvents.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: VstudyColors.paper,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Text(
+              'Ngày này chưa có lịch. Chọn + Thêm để lên kế hoạch học tập.',
+              style: TextStyle(fontSize: 12, color: VstudyColors.muted),
+            ),
+          ),
+        ...selectedEvents.map(_agendaCard),
+        const SizedBox(height: 12),
+        _legend(),
+      ],
     );
   }
+
+  Widget _agendaCard(StudyEvent event) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Material(
+      color: _eventColor(event),
+      elevation: 1,
+      shadowColor: VstudyColors.navy.withValues(alpha: .1),
+      borderRadius: BorderRadius.circular(15),
+      child: InkWell(
+        onTap: () => _details(event),
+        borderRadius: BorderRadius.circular(15),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                event.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: VstudyColors.navy,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${DateFormat('HH:mm').format(event.startsAt.toLocal())} – ${DateFormat('HH:mm').format(event.endsAt.toLocal())}'
+                '${event.location.isEmpty ? '' : ' · ${event.location}'}',
+                style: const TextStyle(fontSize: 10, color: VstudyColors.navy),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _legend() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    child: Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      children: [
+        _legendItem(const Color(0xFFC7CFDF), 'Lịch học trên lớp'),
+        _legendItem(const Color(0xFFF9EDB9), 'Lịch ôn tập tự học'),
+        _legendItem(VstudyColors.red, 'Deadline dưới 2 ngày'),
+        _legendItem(const Color(0xFF409D72), 'Deadline từ 2 ngày'),
+      ],
+    ),
+  );
+  Widget _legendItem(Color color, String label) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 13,
+        height: 13,
+        decoration: BoxDecoration(
+          color: color,
+          border: Border.all(color: VstudyColors.navy.withValues(alpha: .2)),
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+      const SizedBox(width: 6),
+      Text(
+        label,
+        style: const TextStyle(fontSize: 9, color: VstudyColors.muted),
+      ),
+    ],
+  );
+
+  Color _eventColor(StudyEvent event) => switch (event.kind) {
+    EventKind.classSession => const Color(0xFFC7CFDF),
+    EventKind.selfStudy => const Color(0xFFF9EDB9),
+    EventKind.deadline =>
+      event.startsAt.difference(DateTime.now()) < const Duration(days: 2)
+          ? VstudyColors.red
+          : const Color(0xFF409D72),
+  };
+  List<StudyEvent> _forDay(List<StudyEvent> events, DateTime date) =>
+      events
+          .where(
+            (event) =>
+                event.startsAt.isBefore(_nextDay(date)) &&
+                event.endsAt.isAfter(_day(date)),
+          )
+          .toList()
+        ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+  static const _weekdays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  String _weekday(DateTime date) =>
+      date.weekday == 7 ? 'Chủ nhật' : 'Thứ ${date.weekday + 1}';
+}
+
+class _EventPlacement {
+  _EventPlacement(this.event, this.start, this.end, this.lane);
+  final StudyEvent event;
+  final double start;
+  final double end;
+  final int lane;
+  int columns = 1;
 }
 
 String _kindLabel(EventKind kind) => switch (kind) {
