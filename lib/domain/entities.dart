@@ -133,12 +133,58 @@ class Quiz {
     required this.topic,
     required this.createdAt,
     this.sourceDocumentId,
+    this.subjectId,
+    this.chapterId,
+    this.durationMinutes = 30,
+    this.difficulty = 'medium',
   });
   final String id;
   final String title;
   final String topic;
   final DateTime createdAt;
   final String? sourceDocumentId;
+  final String? subjectId;
+  final String? chapterId;
+  final int durationMinutes;
+  final String difficulty;
+}
+
+class QuizChapter {
+  const QuizChapter({
+    required this.id,
+    required this.subjectId,
+    required this.title,
+    required this.position,
+    this.questionCount = 0,
+  });
+  final String id;
+  final String subjectId;
+  final String title;
+  final int position;
+  final int questionCount;
+}
+
+class WrongQuizAnswer {
+  const WrongQuizAnswer({
+    required this.quizId,
+    required this.quizTitle,
+    required this.question,
+    required this.selectedOption,
+    required this.correctOption,
+    required this.explanation,
+    required this.answeredAt,
+    this.subjectId,
+    this.chapterId,
+  });
+  final String quizId;
+  final String quizTitle;
+  final String? subjectId;
+  final String? chapterId;
+  final QuizQuestion question;
+  final int selectedOption;
+  final int correctOption;
+  final String explanation;
+  final DateTime answeredAt;
 }
 
 class QuizQuestion {
@@ -175,6 +221,7 @@ class QuizAttempt {
     required this.totalQuestions,
     required this.submittedAt,
     this.review = const [],
+    this.mode = 'practice',
   });
   final String id;
   final String quizId;
@@ -182,6 +229,7 @@ class QuizAttempt {
   final int totalQuestions;
   final DateTime submittedAt;
   final List<AnswerReview> review;
+  final String mode;
   double get percent =>
       totalQuestions == 0 ? 0 : correctCount * 100 / totalQuestions;
 }

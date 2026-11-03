@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'design_system.dart';
 
 /// The order is shared by every page and matches the submitted design.
-enum VstudyTab { calendar, qa, home, statistics, documents }
+enum VstudyTab { calendar, quiz, home, statistics, documents }
 
 class VstudyFooter extends StatelessWidget {
   const VstudyFooter({
@@ -13,17 +13,11 @@ class VstudyFooter extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
-  static const labels = [
-    'Lịch',
-    'Hỏi đáp',
-    'Trang chủ',
-    'Thống kê',
-    'Tài liệu',
-  ];
-  static const ids = ['calendar', 'qa', 'home', 'statistics', 'documents'];
+  static const labels = ['Lịch', 'Quiz', 'Trang chủ', 'Thống kê', 'Tài liệu'];
+  static const ids = ['calendar', 'quiz', 'home', 'statistics', 'documents'];
   static const icons = [
     Icons.calendar_month_outlined,
-    Icons.forum_outlined,
+    Icons.quiz_outlined,
     Icons.home_outlined,
     Icons.bar_chart_rounded,
     Icons.menu_book_outlined,

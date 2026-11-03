@@ -9,8 +9,9 @@ import '../domain/use_cases.dart';
 import 'widgets.dart';
 
 class AiPage extends StatefulWidget {
-  const AiPage({super.key, required this.useCases});
+  const AiPage({super.key, required this.useCases, this.initialPrompt});
   final VstudyUseCases useCases;
+  final String? initialPrompt;
   @override
   State<AiPage> createState() => _AiPageState();
 }
@@ -30,6 +31,13 @@ class _AiPageState extends State<AiPage> {
   void initState() {
     super.initState();
     _future = _load();
+    if (widget.initialPrompt != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _open();
+        }
+      });
+    }
   }
 
   Future<_AiOverview> _load() async {
@@ -53,6 +61,7 @@ class _AiPageState extends State<AiPage> {
           thread: thread,
           mode: thread?.mode ?? _mode,
           documentId: thread == null ? _documentId : thread.documentId,
+          initialPrompt: thread == null ? widget.initialPrompt : null,
         ),
       ),
     );
@@ -214,11 +223,13 @@ class _ConversationPage extends StatefulWidget {
     required this.mode,
     this.thread,
     this.documentId,
+    this.initialPrompt,
   });
   final VstudyUseCases useCases;
   final ChatThread? thread;
   final AiMode mode;
   final String? documentId;
+  final String? initialPrompt;
   @override
   State<_ConversationPage> createState() => _ConversationPageState();
 }
@@ -237,12 +248,15 @@ class _ConversationPageState extends State<_ConversationPage> {
     _threadId = widget.thread?.id;
     _future = _load();
     if (widget.thread == null) {
-      _input.text = switch (widget.mode) {
-        AiMode.summary => 'Tóm tắt các ý chính và kiến thức cần ghi nhớ.',
-        AiMode.plan => 'Giúp mình lập lộ trình ôn tập phù hợp trong tuần này.',
-        AiMode.flashcards => 'Tạo flashcard hỏi–đáp để mình ôn tập.',
-        AiMode.qa => '',
-      };
+      _input.text =
+          widget.initialPrompt ??
+          switch (widget.mode) {
+            AiMode.summary => 'Tóm tắt các ý chính và kiến thức cần ghi nhớ.',
+            AiMode.plan =>
+              'Giúp mình lập lộ trình ôn tập phù hợp trong tuần này.',
+            AiMode.flashcards => 'Tạo flashcard hỏi–đáp để mình ôn tập.',
+            AiMode.qa => '',
+          };
     }
   }
 

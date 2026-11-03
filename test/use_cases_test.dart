@@ -46,6 +46,10 @@ class _Quizzes implements QuizRepository {
     required String topic,
     required int questionCount,
     String? documentId,
+    String? subjectId,
+    String? chapterId,
+    int durationMinutes = 30,
+    String difficulty = 'medium',
   }) async {
     count = questionCount;
     return 'new-quiz';

@@ -447,3 +447,93 @@ Deno.test("timeouts are reported without persisting or leaking upstream errors",
       {},
     ), "upstream_timeout");
 });
+
+Deno.test("quiz catalog metadata is validated before AI work", async () => {
+  for (
+    const metadata of [
+      { duration_minutes: 0 },
+      { duration_minutes: 181 },
+      { duration_minutes: "30" },
+      { difficulty: "unknown" },
+      { chapter_id: threadId },
+      { subject_id: "bad-id" },
+    ]
+  ) {
+    const { fetcher, calls } = fakeFetch();
+    const response = await quizHandler(config, fetcher)(request({
+      title: "Triết",
+      topic: "Nhận thức",
+      question_count: 1,
+      ...metadata,
+    }));
+    equal(response.status, 400);
+    equal(calls.length, 1);
+  }
+});
+
+Deno.test("foreign subject and mismatched chapter stop before Gemini and quota lease", async () => {
+  const foreign = fakeFetch((call) => call.url.includes("/subjects?") ? output([]) : undefined);
+  equal(
+    (await quizHandler(config, foreign.fetcher)(request({
+      title: "Triết",
+      topic: "Nhận thức",
+      question_count: 1,
+      subject_id: documentId,
+    }))).status,
+    404,
+  );
+  ok(!foreign.calls.some((call) => call.url.includes("acquire_ai_request")));
+  const mismatch = fakeFetch((call) => {
+    if (call.url.includes("/subjects?")) return output([{ id: documentId }]);
+    if (call.url.includes("/quiz_chapters?")) return output([{ id: threadId, subject_id: quizId }]);
+  });
+  equal(
+    (await quizHandler(config, mismatch.fetcher)(request({
+      title: "Triết",
+      topic: "Nhận thức",
+      question_count: 1,
+      subject_id: documentId,
+      chapter_id: threadId,
+    }))).status,
+    400,
+  );
+  ok(!mismatch.calls.some((call) => call.url.includes("generativelanguage")));
+});
+
+Deno.test("owned subject chapter and timing metadata reach the atomic quiz RPC", async () => {
+  const { fetcher, calls } = fakeFetch((call) => {
+    if (call.url.includes("/subjects?")) {
+      ok(new URL(call.url).searchParams.get("owner_id") === `eq.${owner}`);
+      return output([{ id: documentId }]);
+    }
+    if (call.url.includes("/quiz_chapters?")) {
+      ok(new URL(call.url).searchParams.get("owner_id") === `eq.${owner}`);
+      return output([{ id: threadId, subject_id: documentId }]);
+    }
+    if (call.url.includes("generativelanguage")) {
+      return output({
+        candidates: [{
+          finishReason: "STOP",
+          content: {
+            parts: [{ text: JSON.stringify({ questions: [question] }) }],
+          },
+        }],
+      });
+    }
+  });
+  const response = await quizHandler(config, fetcher)(request({
+    title: "Triết",
+    topic: "Nhận thức",
+    question_count: 1,
+    subject_id: documentId,
+    chapter_id: threadId,
+    duration_minutes: 25,
+    difficulty: "hard",
+  }));
+  equal(response.status, 200);
+  const persist = calls.find((call) => call.url.endsWith("create_generated_quiz"));
+  equal(persist?.body?.p_subject_id, documentId);
+  equal(persist?.body?.p_chapter_id, threadId);
+  equal(persist?.body?.p_duration_minutes, 25);
+  equal(persist?.body?.p_difficulty, "hard");
+});

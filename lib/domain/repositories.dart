@@ -53,16 +53,34 @@ abstract interface class DocumentRepository {
 abstract interface class QuizRepository {
   Future<List<Quiz>> listQuizzes();
   Future<List<QuizQuestion>> getQuestions(String quizId);
+  Future<List<QuizChapter>> listChapters(String subjectId);
+  Future<QuizChapter> createChapter({
+    required String subjectId,
+    required String title,
+  });
+  Future<List<WrongQuizAnswer>> listWrongAnswers({String? subjectId});
+  Future<AnswerReview> checkPracticeAnswer({
+    required String quizId,
+    required String questionId,
+    required int selectedOption,
+  });
+  Future<QuizAttempt> getAttempt(String attemptId);
   Future<String> generate({
     required String title,
     required String topic,
     required int questionCount,
     String? documentId,
+    String? subjectId,
+    String? chapterId,
+    int durationMinutes = 30,
+    String difficulty = 'medium',
   });
   Future<QuizAttempt> submit({
     required String quizId,
     required String attemptId,
     required Map<String, int> answers,
+    bool allowUnanswered = false,
+    String mode = 'practice',
   });
   Future<List<QuizAttempt>> listAttempts();
 }

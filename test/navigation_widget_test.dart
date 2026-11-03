@@ -11,7 +11,7 @@ import 'package:vstudy/presentation/statistics_page.dart';
 
 const _footerKeys = [
   'footer-calendar',
-  'footer-qa',
+  'footer-quiz',
   'footer-home',
   'footer-statistics',
   'footer-documents',
@@ -71,7 +71,7 @@ void main() {
       }
       for (final destination in <(String, Type)>[
         ('footer-calendar', CalendarPage),
-        ('footer-qa', AiPage),
+        ('footer-quiz', QuizPage),
         ('footer-home', HomePage),
         ('footer-statistics', StatisticsPage),
         ('footer-documents', DocumentsPage),
@@ -84,30 +84,28 @@ void main() {
     },
   );
 
-  testWidgets('footer survives quiz routes and house returns to actual home', (
-    tester,
-  ) async {
-    await openPrototype(tester);
-    final quizShortcut = find.byKey(const ValueKey('home-quiz'));
-    await tester.ensureVisible(quizShortcut);
-    await tester.tap(quizShortcut);
-    await tester.pumpAndSettle();
-    expect(find.byType(QuizPage), findsOneWidget);
-    expectFooterVisible(tester);
-
-    await tester.tap(find.text('Nguyên lý UX/UI').first);
-    await tester.pumpAndSettle();
-    expect(find.text('Làm quiz'), findsOneWidget);
-    expectFooterVisible(tester);
-
-    await selectFooter(tester, 'footer-documents');
-    expect(find.byType(DocumentsPage), findsOneWidget);
-    await selectFooter(tester, 'footer-home');
-    expect(find.byType(HomePage), findsOneWidget);
-    expect(find.byType(QuizPage), findsNothing);
-    expect(find.text('Làm quiz'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'footer remains outside nested quiz routes and house resets navigation',
+    (tester) async {
+      await openPrototype(tester);
+      await selectFooter(tester, 'footer-quiz');
+      final context = tester.element(find.byType(QuizPage));
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => const Scaffold(body: Text('Nested quiz detail')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Nested quiz detail'), findsOneWidget);
+      expectFooterVisible(tester);
+      await selectFooter(tester, 'footer-documents');
+      expect(find.byType(DocumentsPage), findsOneWidget);
+      await selectFooter(tester, 'footer-home');
+      expect(find.byType(HomePage), findsOneWidget);
+      expect(find.text('Nested quiz detail'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('calendar changes day week month without losing footer', (
     tester,
@@ -129,7 +127,10 @@ void main() {
     'AI conversation and document routes retain footer and system back pops inner routes',
     (tester) async {
       await openPrototype(tester);
-      await selectFooter(tester, 'footer-qa');
+      await selectFooter(tester, 'footer-quiz');
+      await tester.tap(find.byKey(const ValueKey('open-ai')));
+      await tester.pumpAndSettle();
+      expect(find.byType(AiPage), findsOneWidget);
       final conversation = find.text('Cách ôn tập hiệu quả');
       await tester.scrollUntilVisible(
         conversation,
@@ -162,7 +163,7 @@ void main() {
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.byType(HomePage), findsOneWidget);
+      expect(find.byType(QuizPage), findsOneWidget);
       expectFooterVisible(tester);
       expect(tester.takeException(), isNull);
     },

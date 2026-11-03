@@ -166,8 +166,40 @@ Quiz quizFromJson(Map<String, dynamic> row) => Quiz(
   title: row['title'] as String,
   topic: row['topic'] as String,
   sourceDocumentId: row['source_document_id'] as String?,
+  subjectId: row['subject_id'] as String?,
+  chapterId: row['chapter_id'] as String?,
+  durationMinutes: row['duration_minutes'] as int? ?? 30,
+  difficulty: row['difficulty'] as String? ?? 'medium',
   createdAt: localTimestamp(row['created_at']),
 );
+
+QuizChapter chapterFromJson(Map<String, dynamic> row) => QuizChapter(
+  id: row['id'] as String,
+  subjectId: row['subject_id'] as String,
+  title: row['title'] as String,
+  position: row['position'] as int,
+  questionCount: (row['question_count'] as num?)?.toInt() ?? 0,
+);
+
+AnswerReview answerReviewFromJson(Map<String, dynamic> row) => AnswerReview(
+  questionId: row['question_id'] as String,
+  selectedOption: row['selected_option'] as int,
+  correctOption: row['correct_option'] as int,
+  explanation: row['explanation'] as String,
+);
+
+WrongQuizAnswer wrongAnswerFromJson(Map<String, dynamic> row) =>
+    WrongQuizAnswer(
+      quizId: row['quiz_id'] as String,
+      quizTitle: row['quiz_title'] as String,
+      subjectId: row['subject_id'] as String?,
+      chapterId: row['chapter_id'] as String?,
+      question: questionFromJson(jsonObject(row['question'])),
+      selectedOption: row['selected_option'] as int,
+      correctOption: row['correct_option'] as int,
+      explanation: row['explanation'] as String,
+      answeredAt: localTimestamp(row['answered_at']),
+    );
 
 QuizQuestion questionFromJson(Map<String, dynamic> row) => QuizQuestion(
   id: row['id'] as String,
@@ -182,6 +214,7 @@ QuizAttempt attemptFromJson(Map<String, dynamic> row) => QuizAttempt(
   correctCount: row['correct_count'] as int,
   totalQuestions: row['total_questions'] as int,
   submittedAt: localTimestamp(row['submitted_at']),
+  mode: row['mode'] as String? ?? 'practice',
   review: (row['review'] as List? ?? const [])
       .map((value) {
         final item = jsonObject(value);

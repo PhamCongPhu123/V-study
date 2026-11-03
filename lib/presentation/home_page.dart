@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../domain/entities.dart';
 import '../domain/use_cases.dart';
 import 'design_system.dart';
-import 'quiz_page.dart';
+import 'quiz_ai_launcher.dart';
 import 'widgets.dart';
 
 class HomePage extends StatefulWidget {
@@ -59,18 +59,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openQuizzes() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          backgroundColor: VstudyColors.cream,
-          appBar: AppBar(title: const Text('Quiz ôn tập')),
-          body: QuizPage(useCases: widget.useCases),
-        ),
-      ),
-    );
-    if (mounted) {
-      _refresh();
-    }
+    widget.onNavigate(1);
   }
 
   String get _greeting {
@@ -403,7 +392,7 @@ class _HomePageState extends State<HomePage> {
       color: const Color(0xFFF9EDC2),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        onTap: () => widget.onNavigate(1),
+        onTap: () => QuizAiLauncher.open(context),
         borderRadius: BorderRadius.circular(18),
         child: Container(
           padding: const EdgeInsets.all(13),

@@ -164,17 +164,34 @@ class VstudyUseCases {
     required String topic,
     required int questionCount,
     String? documentId,
+    String? subjectId,
+    String? chapterId,
+    int durationMinutes = 30,
+    String difficulty = 'medium',
   }) {
     final validTitle = _text(title, 'Tên quiz', 200);
     final validTopic = _text(topic, 'Chủ đề', 2000);
     if (questionCount < 1 || questionCount > 30) {
       throw const AppException('Mỗi quiz cần từ 1 đến 30 câu.');
     }
+    if (durationMinutes < 1 || durationMinutes > 180) {
+      throw const AppException('Thời gian làm bài cần từ 1 đến 180 phút.');
+    }
+    if (!['easy', 'medium', 'hard'].contains(difficulty)) {
+      throw const AppException('Độ khó chưa hợp lệ.');
+    }
+    if (chapterId != null && subjectId == null) {
+      throw const AppException('Vui lòng chọn môn học cho chương.');
+    }
     return quizzes.generate(
       title: validTitle,
       topic: validTopic,
       questionCount: questionCount,
       documentId: documentId,
+      subjectId: subjectId,
+      chapterId: chapterId,
+      durationMinutes: durationMinutes,
+      difficulty: difficulty,
     );
   }
 
@@ -182,8 +199,14 @@ class VstudyUseCases {
     required String quizId,
     required String attemptId,
     required Map<String, int> answers,
+    bool allowUnanswered = false,
+    String mode = 'practice',
   }) {
-    if (answers.isEmpty || answers.values.any((v) => v < 0 || v > 3)) {
+    if (!['practice', 'exam'].contains(mode)) {
+      throw const AppException('Chế độ làm bài chưa hợp lệ.');
+    }
+    if ((!allowUnanswered && answers.isEmpty) ||
+        answers.values.any((v) => v < 0 || v > 3)) {
       throw const AppException('Vui lòng chọn đáp án cho tất cả câu hỏi.');
     }
     // The database independently enforces completeness and grades private keys.
@@ -191,6 +214,33 @@ class VstudyUseCases {
       quizId: quizId,
       attemptId: attemptId,
       answers: Map.unmodifiable(answers),
+      allowUnanswered: allowUnanswered,
+      mode: mode,
+    );
+  }
+
+  Future<AnswerReview> checkPracticeAnswer({
+    required String quizId,
+    required String questionId,
+    required int selectedOption,
+  }) {
+    if (selectedOption < 0 || selectedOption > 3) {
+      throw const AppException('Vui lòng chọn một đáp án hợp lệ.');
+    }
+    return quizzes.checkPracticeAnswer(
+      quizId: quizId,
+      questionId: questionId,
+      selectedOption: selectedOption,
+    );
+  }
+
+  Future<QuizChapter> createQuizChapter({
+    required String subjectId,
+    required String title,
+  }) {
+    return quizzes.createChapter(
+      subjectId: subjectId,
+      title: _text(title, 'Tên chương', 200),
     );
   }
 

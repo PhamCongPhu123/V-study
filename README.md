@@ -6,7 +6,20 @@
 
 Trang chủ và lịch được chỉnh theo ảnh mẫu mới: nền kem/vàng nhạt, thẻ mục tiêu navy với vòng tiến độ vàng, các thẻ Quiz/Tài liệu, biểu đồ tuần và lịch ngày/tuần/tháng.
 
-Footer chung có thứ tự **Lịch → Hỏi đáp → Trang chủ → Thống kê → Tài liệu**; biểu tượng ngôi nhà nằm giữa và mở Trang chủ. Footer cũng giữ nguyên khi mở quiz, hội thoại hay tài liệu trong từng tab. Chạm lại biểu tượng tab sẽ trở về trang đầu của tab đó. Nút Back Android đóng trang con trước, rồi trở về Trang chủ khi đang ở tab khác.
+Footer chung có thứ tự **Lịch → Quiz → Trang chủ → Thống kê → Tài liệu**; biểu tượng ngôi nhà nằm giữa và mở Trang chủ. AI mở bằng nút tròn vàng hình lấp lánh bên phải, tách khỏi footer. Footer giữ nguyên khi mở quiz, hội thoại hay tài liệu trong từng tab. Chạm lại biểu tượng tab sẽ trở về trang đầu của tab đó. Nút Back Android đóng trang con trước; từ AI trở về tab đã mở trước đó.
+
+## Quiz theo các frame mới
+
+- Dashboard có tiến độ, mục tiêu theo ngày, bộ lọc Tất cả/Luyện tập/Đã thi/Câu sai, các môn và kết quả gần đây.
+- Mỗi môn có ba tab **Bộ đề / Chương / Câu sai**. Có thể thêm môn/chương, tạo bộ đề theo chủ đề hoặc tài liệu, chọn thời lượng và độ khó. Quiz cũ chưa phân môn vẫn xuất hiện ở nhóm riêng.
+- Chi tiết chương hiển thị số câu, thời gian, điểm tốt nhất và chọn **Luyện tập** hoặc **Thi thử**. Luyện tập phản hồi từng câu; thi thử có đồng hồ, tự nộp khi hết giờ và tính câu bỏ trống là sai. Đồng hồ là công cụ phía client, không phải hệ thống giám sát thi.
+- Màn hình câu hỏi hiển thị từng câu với bốn lựa chọn A–D, tiến độ và nút tiếp theo. Kết quả cho phép xem lời giải và làm lại; mở lịch sử sẽ xem đúng bài đã nộp, không tự bắt đầu bài mới.
+- Ngân hàng câu sai dùng câu trả lời gần nhất. Luyện lại từng câu/toàn bộ; trả lời đúng gỡ câu khỏi bank. Nút **Giải thích AI** điền câu hỏi và đáp án vào hội thoại để người dùng gửi khi muốn, không tự gọi Gemini.
+- **Đã thi** lọc bài nộp chế độ thi thử; luyện tập có lịch sử riêng. Bản mẫu có Triết học Mác–Lênin, Pháp luật, Toán và Quản trị dự án cùng các chương/bộ đề minh họa. Thay đổi mẫu được khôi phục khi khởi động lại.
+
+Để xem giao diện: cập nhật nhánh `android-working`, chạy `flutter pub get`, dừng app cũ và Run lại `lib/main.dart`. Không cần đăng nhập hay chạy SQL để xem bản mẫu.
+
+**Backend thật:** sau migration ban đầu, áp dụng file mới `supabase/migrations/202611030002_quiz_learning.sql`, rồi deploy lại `generate-quiz`. Không chạy lại migration đầu tiên. Xem [hướng dẫn nâng cấp Quiz](docs/quiz-backend-upgrade.md) và [kết quả xác minh](docs/quiz-verification.md).
 
 Mặc định mở bản mẫu không cần đăng nhập hoặc khóa Supabase. Dữ liệu minh họa chỉ lưu trong phiên chạy; phần chat/quiz mô phỏng được ghi rõ là minh họa.
 

@@ -118,21 +118,7 @@ class PreviewRepository
         createdAt: _now.subtract(const Duration(days: 1)),
       ),
     );
-    _addQuiz(
-      'ux-quiz',
-      'Nguyên lý UX/UI',
-      'Thiết kế lấy người dùng làm trung tâm',
-      5,
-    );
-    _attempts.add(
-      QuizAttempt(
-        id: 'recent',
-        quizId: 'ux-quiz',
-        correctCount: 4,
-        totalQuestions: 5,
-        submittedAt: _now.subtract(const Duration(days: 1)),
-      ),
-    );
+    _seedLearningQuizzes();
     _threads.add(
       ChatThread(
         id: 'intro-chat',
@@ -162,10 +148,32 @@ class PreviewRepository
 
   final DateTime _now;
   var _sequence = 0;
+  DateTime? _lastAnsweredAt;
+  DateTime _answeredNow() {
+    final now = DateTime.now();
+    final baseline = _lastAnsweredAt ?? _now;
+    final next = now.isAfter(baseline)
+        ? now
+        : baseline.add(const Duration(microseconds: 1));
+    _lastAnsweredAt = next;
+    return next;
+  }
+
   String _id() => 'preview-${++_sequence}';
   Profile _profile = const Profile(id: 'preview-user', displayName: 'Tom');
   final _subjects = <Subject>[
+    const Subject(
+      id: 'philosophy',
+      name: 'Triết học Mác-Lênin',
+      color: '#D5AD1C',
+    ),
+    const Subject(id: 'law', name: 'Pháp luật đại cương', color: '#9278D4'),
     const Subject(id: 'math', name: 'Toán cao cấp'),
+    const Subject(
+      id: 'project-management',
+      name: 'Quản trị dự án phần mềm',
+      color: '#3B9B70',
+    ),
     const Subject(id: 'network', name: 'Lập trình mạng', color: '#CAD2E4'),
     const Subject(id: 'design', name: 'Thiết kế UX/UI', color: '#C9A227'),
   ];
@@ -174,6 +182,9 @@ class PreviewRepository
   final _documents = <StudyDocument>[];
   final _quizzes = <Quiz>[];
   final _questions = <String, List<QuizQuestion>>{};
+  final _chapters = <QuizChapter>[];
+  final _keys = <String, (int, String)>{};
+  final _practice = <String, (String, AnswerReview, DateTime)>{};
   final _attempts = <QuizAttempt>[];
   final _submitted = <String, Map<String, int>>{};
   final _threads = <ChatThread>[];
@@ -435,49 +446,496 @@ class PreviewRepository
       'Quan sát tác vụ giúp phát hiện và cải thiện trở ngại thực tế.',
     ),
   ];
+  static const _philosophyQuestions = [
+    (
+      'Vấn đề cơ bản của mọi triết học là mối quan hệ giữa yếu tố nào?',
+      [
+        'Vật chất và ý thức',
+        'Con người và tự nhiên',
+        'Lý luận và thực tiễn',
+        'Cá nhân và cộng đồng',
+      ],
+      'Vấn đề cơ bản của triết học là quan hệ giữa vật chất và ý thức, gồm mặt bản thể luận và mặt nhận thức luận.',
+    ),
+    (
+      'Theo chủ nghĩa duy vật biện chứng, vật chất có đặc điểm nào?',
+      [
+        'Tồn tại khách quan, độc lập với ý thức',
+        'Chỉ tồn tại khi được cảm nhận',
+        'Do ý niệm tuyệt đối tạo ra',
+        'Đồng nhất với một vật thể cụ thể',
+      ],
+      'Phạm trù vật chất chỉ thực tại khách quan được đem lại cho con người trong cảm giác, tồn tại không lệ thuộc vào cảm giác.',
+    ),
+    (
+      'Nguồn gốc xã hội của ý thức gồm những yếu tố nào?',
+      [
+        'Lao động và ngôn ngữ',
+        'Bản năng và giấc mơ',
+        'Khí hậu và địa hình',
+        'Vận động cơ học và nhiệt',
+      ],
+      'Lao động và ngôn ngữ là những nguồn gốc xã hội trực tiếp, quan trọng của sự hình thành ý thức.',
+    ),
+    (
+      'Thực tiễn có vai trò nào đối với nhận thức?',
+      [
+        'Là cơ sở, động lực, mục đích và tiêu chuẩn kiểm tra chân lý',
+        'Thay thế hoàn toàn tư duy',
+        'Chỉ là kết quả thụ động của ý thức',
+        'Không liên quan đến chân lý',
+      ],
+      'Nhận thức xuất phát từ thực tiễn, phục vụ thực tiễn và được kiểm tra bằng thực tiễn.',
+    ),
+    (
+      'Quy luật lượng - chất nói về điều gì?',
+      [
+        'Sự thay đổi về lượng dẫn đến thay đổi về chất và ngược lại',
+        'Mọi thay đổi lượng đều lập tức đổi chất',
+        'Chất không bao giờ thay đổi',
+        'Lượng và chất tồn tại tách biệt',
+      ],
+      'Biến đổi về lượng tích lũy đến điểm nút có thể tạo bước nhảy làm thay đổi chất; chất mới tác động trở lại lượng.',
+    ),
+    (
+      'Theo chủ nghĩa duy vật lịch sử, tồn tại xã hội có quan hệ nào với ý thức xã hội?',
+      [
+        'Tồn tại xã hội quyết định ý thức xã hội',
+        'Ý thức xã hội luôn có trước tồn tại xã hội',
+        'Hai yếu tố không liên hệ',
+        'Ý thức xã hội không có tính độc lập tương đối',
+      ],
+      'Tồn tại xã hội quyết định ý thức xã hội; ý thức xã hội có tính độc lập tương đối và tác động trở lại tồn tại xã hội.',
+    ),
+    (
+      'Phủ định biện chứng có tính chất nào?',
+      [
+        'Khách quan và kế thừa',
+        'Xóa sạch toàn bộ cái cũ',
+        'Chỉ do ý muốn cá nhân',
+        'Chấm dứt mọi sự phát triển',
+      ],
+      'Phủ định biện chứng do mâu thuẫn bên trong sự vật và kế thừa những yếu tố phù hợp của cái cũ.',
+    ),
+    (
+      'Theo quan điểm biện chứng, mối liên hệ có đặc điểm nào?',
+      [
+        'Khách quan, phổ biến và đa dạng',
+        'Chỉ tồn tại trong suy nghĩ',
+        'Luôn giống nhau ở mọi sự vật',
+        'Không phụ thuộc điều kiện cụ thể',
+      ],
+      'Quan điểm toàn diện cần xem xét các mối liên hệ trong điều kiện lịch sử cụ thể, tránh cách nhìn phiến diện.',
+    ),
+  ];
+  static const _lawQuestions = [
+    (
+      'Dấu hiệu đặc trưng của quy phạm pháp luật là gì?',
+      [
+        'Có tính bắt buộc chung và được Nhà nước bảo đảm thực hiện',
+        'Chỉ là lời khuyên tự nguyện',
+        'Chỉ áp dụng cho người lập ra nó',
+        'Không được thể hiện bằng hình thức xác định',
+      ],
+      'Quy phạm pháp luật là quy tắc xử sự chung do Nhà nước ban hành hoặc thừa nhận, bảo đảm thực hiện.',
+    ),
+    (
+      'Một văn bản quy phạm pháp luật phải được ban hành như thế nào?',
+      [
+        'Đúng thẩm quyền, hình thức và trình tự luật định',
+        'Theo ý kiến cá nhân bất kỳ',
+        'Chỉ cần đăng mạng xã hội',
+        'Không cần căn cứ pháp lý',
+      ],
+      'Thẩm quyền, hình thức và trình tự là các yêu cầu đối với việc ban hành văn bản quy phạm pháp luật.',
+    ),
+    (
+      'Năng lực hành vi của cá nhân thể hiện khả năng nào?',
+      [
+        'Bằng hành vi của mình xác lập, thực hiện quyền và nghĩa vụ',
+        'Biết đọc mọi văn bản',
+        'Luôn được miễn trách nhiệm',
+        'Có quyền thay đổi mọi luật',
+      ],
+      'Năng lực hành vi liên quan khả năng tự mình xác lập và thực hiện quyền, nghĩa vụ theo pháp luật.',
+    ),
+    (
+      'Quan hệ pháp luật gồm những thành phần cơ bản nào?',
+      [
+        'Chủ thể, khách thể và nội dung',
+        'Tên gọi, màu sắc và hình dáng',
+        'Tiêu đề và phần kết',
+        'Chỉ quyền của một bên',
+      ],
+      'Chủ thể tham gia quan hệ, khách thể hướng tới, nội dung gồm quyền và nghĩa vụ pháp lý.',
+    ),
+    (
+      'Trách nhiệm pháp lý thường phát sinh trên cơ sở nào?',
+      [
+        'Vi phạm pháp luật theo các điều kiện luật định',
+        'Mọi ý kiến khác biệt',
+        'Mọi thiệt hại không cần xét điều kiện',
+        'Sở thích của người xử lý',
+      ],
+      'Việc xác định trách nhiệm phải dựa trên căn cứ và điều kiện do pháp luật quy định.',
+    ),
+  ];
+  static const _mathQuestions = [
+    (
+      'Đạo hàm của f(x) = x² là gì?',
+      ['2x', 'x', 'x³', '2'],
+      'Áp dụng quy tắc đạo hàm lũy thừa: (xⁿ)′ = nxⁿ⁻¹.',
+    ),
+    (
+      'Giới hạn của sin(x)/x khi x tiến tới 0 là bao nhiêu?',
+      ['1', '0', 'Không tồn tại', 'Vô cùng'],
+      'Đây là giới hạn lượng giác cơ bản, với góc tính bằng radian.',
+    ),
+    (
+      'Nguyên hàm của 2x có dạng nào?',
+      ['x² + C', '2 + C', '2x² + C', 'x + C'],
+      'Đạo hàm của x² + C bằng 2x.',
+    ),
+    (
+      'Định thức của ma trận đơn vị cấp 2 bằng bao nhiêu?',
+      ['1', '0', '2', '-1'],
+      'Định thức ma trận đơn vị bằng tích các phần tử đường chéo, bằng 1.',
+    ),
+    (
+      'Một hệ tuyến tính thuần nhất luôn có nghiệm nào?',
+      [
+        'Nghiệm không',
+        'Duy nhất nghiệm khác không',
+        'Không có nghiệm',
+        'Mọi vector đều là nghiệm',
+      ],
+      'Vector không luôn thỏa hệ Ax = 0.',
+    ),
+  ];
+  static const _projectQuestions = [
+    (
+      'Mục đích của quản lý phạm vi dự án là gì?',
+      [
+        'Xác định và kiểm soát công việc thuộc dự án',
+        'Thay đổi yêu cầu không kiểm soát',
+        'Chỉ chọn màu giao diện',
+        'Bỏ qua sản phẩm bàn giao',
+      ],
+      'Quản lý phạm vi giúp bảo đảm dự án bao gồm công việc cần thiết để đạt mục tiêu.',
+    ),
+    (
+      'Rủi ro dự án nên được xử lý như thế nào?',
+      [
+        'Nhận diện, phân tích và lập phương án ứng phó',
+        'Chờ xảy ra rồi bỏ qua',
+        'Giấu với các bên liên quan',
+        'Xem mọi rủi ro là chắc chắn',
+      ],
+      'Rủi ro là sự kiện không chắc chắn; cần được theo dõi và ứng phó có kế hoạch.',
+    ),
+    (
+      'Trong Scrum, Product Backlog thể hiện điều gì?',
+      [
+        'Danh sách công việc được sắp xếp thứ tự cho sản phẩm',
+        'Bảng chấm công bắt buộc',
+        'Chỉ các lỗi đã đóng',
+        'Danh sách thiết bị văn phòng',
+      ],
+      'Product Backlog là danh sách được sắp thứ tự về những gì cần cho sản phẩm.',
+    ),
+    (
+      'WBS được dùng để làm gì?',
+      [
+        'Phân rã phạm vi thành các phần công việc quản lý được',
+        'Tăng số yêu cầu tùy ý',
+        'Thay thế mọi kế hoạch',
+        'Chỉ lưu mã nguồn',
+      ],
+      'Cấu trúc phân rã công việc giúp tổ chức phạm vi theo các thành phần có thể quản lý.',
+    ),
+    (
+      'Một thay đổi yêu cầu nên được đánh giá theo yếu tố nào?',
+      [
+        'Tác động đến phạm vi, thời gian, chi phí và chất lượng',
+        'Chỉ cảm tính cá nhân',
+        'Chỉ tên người yêu cầu',
+        'Không cần đánh giá',
+      ],
+      'Đánh giá tác động hỗ trợ quyết định thay đổi và cập nhật kế hoạch phù hợp.',
+    ),
+  ];
+
+  void _seedLearningQuizzes() {
+    const titles = {
+      'philosophy': [
+        'Lịch sử hình thành và phát triển',
+        'Duy vật biện chứng',
+        'Duy vật lịch sử',
+        'Chủ nghĩa duy tâm',
+        'Sự phát triển của triết học Mác-Lênin',
+        'Lý luận nhận thức',
+      ],
+      'law': [
+        'Những vấn đề cơ bản về pháp luật',
+        'Quy phạm và quan hệ pháp luật',
+        'Vi phạm và trách nhiệm pháp lý',
+      ],
+      'math': [
+        'Giới hạn và liên tục',
+        'Đạo hàm và tích phân',
+        'Đại số tuyến tính',
+      ],
+      'project-management': [
+        'Tổng quan quản lý dự án',
+        'Lập kế hoạch và rủi ro',
+        'Phương pháp Agile và Scrum',
+      ],
+    };
+    for (final course in titles.entries) {
+      for (var index = 0; index < course.value.length; index++) {
+        final chapterId = '${course.key}-chapter-${index + 1}';
+        _chapters.add(
+          QuizChapter(
+            id: chapterId,
+            subjectId: course.key,
+            title: course.value[index],
+            position: index,
+          ),
+        );
+        final sets = course.key == 'philosophy' ? 2 : 1;
+        for (var variant = 0; variant < sets; variant++) {
+          final id = '${course.key}-${index + 1}-${variant + 1}';
+          _addQuiz(
+            id,
+            'Đề ${variant + 1} · Chương ${index + 1}',
+            'Câu hỏi nền tảng minh họa — ${course.value[index]}',
+            5,
+            subjectId: course.key,
+            chapterId: chapterId,
+            difficulty: ['easy', 'medium', 'hard'][(index + variant) % 3],
+            durationMinutes: 15 + variant * 15,
+            questionOffset: index + variant,
+          );
+        }
+      }
+    }
+    _addQuiz(
+      'ux-quiz',
+      'Nguyên lý UX/UI',
+      'Thiết kế lấy người dùng làm trung tâm',
+      5,
+      subjectId: 'design',
+    );
+    // Coherent sample history: these reviews use the same keys as the player.
+    final historyIds = [
+      'philosophy-1-1',
+      'philosophy-2-1',
+      'law-1-1',
+      'math-1-1',
+    ];
+    for (var i = 0; i < historyIds.length; i++) {
+      final questions = _questions[historyIds[i]]!;
+      final answers = <String, int>{};
+      for (final question in questions) {
+        final correct = _keys[question.id]!.$1;
+        answers[question.id] = question.position % (i + 2) == 0
+            ? (correct + 1) % 4
+            : correct;
+      }
+      _recordAttempt(
+        historyIds[i],
+        'sample-attempt-$i',
+        answers,
+        _now.subtract(Duration(days: i, hours: 1)),
+        i.isEven ? 'exam' : 'practice',
+      );
+    }
+    _quizzes.sort((a, b) {
+      final aSubject = a.subjectId == 'philosophy' ? 0 : 1;
+      final bSubject = b.subjectId == 'philosophy' ? 0 : 1;
+      return aSubject.compareTo(bSubject);
+    });
+  }
+
   void _addQuiz(
     String id,
     String title,
     String topic,
-    int count, [
+    int count, {
     String? documentId,
-  ]) {
-    _quizzes.insert(
-      0,
+    String? subjectId,
+    String? chapterId,
+    int durationMinutes = 30,
+    String difficulty = 'medium',
+    int questionOffset = 0,
+  }) {
+    _quizzes.add(
       Quiz(
         id: id,
         title: title,
         topic: topic,
         createdAt: _now,
         sourceDocumentId: documentId,
+        subjectId: subjectId,
+        chapterId: chapterId,
+        durationMinutes: durationMinutes,
+        difficulty: difficulty,
       ),
     );
+    final bank = switch (subjectId) {
+      'philosophy' => _philosophyQuestions,
+      'law' => _lawQuestions,
+      'math' => _mathQuestions,
+      'project-management' => _projectQuestions,
+      _ => _sampleQuestions,
+    };
     _questions[id] = List.generate(count, (i) {
-      final sample = _sampleQuestions[i % _sampleQuestions.length];
-      return QuizQuestion(
+      final sample = bank[(i + questionOffset) % bank.length];
+      final rotation = (i + questionOffset) % 4;
+      final options = List<String>.generate(
+        4,
+        (index) => sample.$2[(index - rotation + 4) % 4],
+      );
+      final question = QuizQuestion(
         id: '$id-q$i',
         position: i,
         question: sample.$1,
-        options: sample.$2,
+        options: List.unmodifiable(options),
       );
+      _keys[question.id] = (rotation, sample.$3);
+      return question;
     });
+  }
+
+  Quiz _quiz(String id) => _quizzes.firstWhere(
+    (q) => q.id == id,
+    orElse: () => throw const AppException('Không tìm thấy quiz.'),
+  );
+
+  List<QuizQuestion> _quizQuestions(String id) {
+    _quiz(id);
+    return _questions[id]!;
   }
 
   @override
   Future<List<Quiz>> listQuizzes() async => List.unmodifiable(_quizzes);
   @override
   Future<List<QuizQuestion>> getQuestions(String quizId) async =>
-      List.unmodifiable(_questions[quizId] ?? []);
+      List.unmodifiable(_quizQuestions(quizId));
+  @override
+  Future<List<QuizChapter>> listChapters(String subjectId) async => _chapters
+      .where((chapter) => chapter.subjectId == subjectId)
+      .map(
+        (chapter) => QuizChapter(
+          id: chapter.id,
+          subjectId: chapter.subjectId,
+          title: chapter.title,
+          position: chapter.position,
+          questionCount: _quizzes
+              .where((q) => q.chapterId == chapter.id)
+              .fold<int>(0, (sum, q) => sum + _quizQuestions(q.id).length),
+        ),
+      )
+      .toList(growable: false);
+
+  @override
+  Future<QuizChapter> createChapter({
+    required String subjectId,
+    required String title,
+  }) async {
+    if (!_subjects.any((s) => s.id == subjectId) ||
+        title.trim().isEmpty ||
+        title.trim().length > 200) {
+      throw const AppException('Tên chương hoặc môn học chưa hợp lệ.');
+    }
+    final positions = _chapters
+        .where((c) => c.subjectId == subjectId)
+        .map((c) => c.position);
+    final position = positions.fold<int>(-1, (a, b) => a > b ? a : b) + 1;
+    final chapter = QuizChapter(
+      id: _id(),
+      subjectId: subjectId,
+      title: title.trim(),
+      position: position,
+    );
+    _chapters.add(chapter);
+    return chapter;
+  }
+
   @override
   Future<String> generate({
     required String title,
     required String topic,
     required int questionCount,
     String? documentId,
+    String? subjectId,
+    String? chapterId,
+    int durationMinutes = 30,
+    String difficulty = 'medium',
   }) async {
+    if (questionCount < 1 ||
+        questionCount > 30 ||
+        durationMinutes < 1 ||
+        durationMinutes > 180 ||
+        !['easy', 'medium', 'hard'].contains(difficulty)) {
+      throw const AppException('Thông số quiz chưa hợp lệ.');
+    }
+    if (subjectId != null && !_subjects.any((s) => s.id == subjectId)) {
+      throw const AppException('Không tìm thấy môn học.');
+    }
+    if (chapterId != null &&
+        !_chapters.any((c) => c.id == chapterId && c.subjectId == subjectId)) {
+      throw const AppException('Chương không thuộc môn học đã chọn.');
+    }
+    if (documentId != null && !_documents.any((d) => d.id == documentId)) {
+      throw const AppException('Không tìm thấy tài liệu.');
+    }
     final id = _id();
-    _addQuiz(id, '$title (minh họa UX/UI)', topic, questionCount, documentId);
+    _addQuiz(
+      id,
+      '$title (minh họa)',
+      topic,
+      questionCount,
+      documentId: documentId,
+      subjectId: subjectId,
+      chapterId: chapterId,
+      durationMinutes: durationMinutes,
+      difficulty: difficulty,
+    );
     return id;
+  }
+
+  QuizAttempt _recordAttempt(
+    String quizId,
+    String attemptId,
+    Map<String, int> normalized,
+    DateTime timestamp, [
+    String mode = 'practice',
+  ]) {
+    final questions = _quizQuestions(quizId);
+    final result = QuizAttempt(
+      id: attemptId,
+      quizId: quizId,
+      correctCount: questions
+          .where((q) => normalized[q.id] == _keys[q.id]!.$1)
+          .length,
+      totalQuestions: questions.length,
+      submittedAt: timestamp,
+      mode: mode,
+      review: questions
+          .map(
+            (q) => AnswerReview(
+              questionId: q.id,
+              selectedOption: normalized[q.id]!,
+              correctOption: _keys[q.id]!.$1,
+              explanation: _keys[q.id]!.$2,
+            ),
+          )
+          .toList(growable: false),
+    );
+    _attempts.insert(0, result);
+    _submitted[attemptId] = Map.unmodifiable(normalized);
+    return result;
   }
 
   @override
@@ -485,50 +943,116 @@ class PreviewRepository
     required String quizId,
     required String attemptId,
     required Map<String, int> answers,
+    bool allowUnanswered = false,
+    String mode = 'practice',
   }) async {
-    final questions = _questions[quizId];
-    if (questions == null ||
-        questions.length != answers.length ||
-        questions.any((q) => !answers.containsKey(q.id)) ||
-        answers.values.any((v) => v < 0 || v > 3)) {
-      throw const AppException('Vui lòng trả lời đầy đủ câu hỏi.');
+    if (!['practice', 'exam'].contains(mode)) {
+      throw const AppException('Chế độ làm bài chưa hợp lệ.');
     }
+    final questions = _quizQuestions(quizId);
+    final ids = questions.map((q) => q.id).toSet();
+    if (answers.keys.any((id) => !ids.contains(id)) ||
+        answers.values.any((v) => v < 0 || v > 3) ||
+        (!allowUnanswered && answers.length != questions.length)) {
+      throw const AppException('Vui lòng trả lời đầy đủ câu hỏi hợp lệ.');
+    }
+    final normalized = {for (final q in questions) q.id: answers[q.id] ?? -1};
     final previous = _attempts.where((a) => a.id == attemptId);
     if (previous.isNotEmpty) {
       final old = _submitted[attemptId]!;
       if (previous.first.quizId != quizId ||
-          old.length != answers.length ||
-          answers.entries.any((e) => old[e.key] != e.value)) {
+          previous.first.mode != mode ||
+          old.length != normalized.length ||
+          normalized.entries.any((e) => old[e.key] != e.value)) {
         throw const AppException('Mã bài nộp đã dùng với đáp án khác.');
       }
       return previous.first;
     }
-    final result = QuizAttempt(
-      id: attemptId,
-      quizId: quizId,
-      correctCount: answers.values.where((v) => v == 0).length,
-      totalQuestions: questions.length,
-      submittedAt: DateTime.now(),
-      review: questions
-          .map(
-            (q) => AnswerReview(
-              questionId: q.id,
-              selectedOption: answers[q.id]!,
-              correctOption: 0,
-              explanation:
-                  _sampleQuestions[q.position % _sampleQuestions.length].$3,
-            ),
-          )
-          .toList(),
-    );
-    _attempts.insert(0, result);
-    _submitted[attemptId] = Map.of(answers);
-    return result;
+    return _recordAttempt(quizId, attemptId, normalized, _answeredNow(), mode);
   }
 
   @override
-  Future<List<QuizAttempt>> listAttempts() async =>
-      List.unmodifiable(_attempts);
+  Future<List<QuizAttempt>> listAttempts() async => List.unmodifiable(
+    _attempts.toList()..sort((a, b) => b.submittedAt.compareTo(a.submittedAt)),
+  );
+  @override
+  Future<QuizAttempt> getAttempt(String attemptId) async =>
+      _attempts.firstWhere(
+        (a) => a.id == attemptId,
+        orElse: () => throw const AppException('Không tìm thấy kết quả.'),
+      );
+
+  @override
+  Future<AnswerReview> checkPracticeAnswer({
+    required String quizId,
+    required String questionId,
+    required int selectedOption,
+  }) async {
+    final questions = _quizQuestions(quizId);
+    if (selectedOption < 0 ||
+        selectedOption > 3 ||
+        !questions.any((q) => q.id == questionId)) {
+      throw const AppException('Câu hỏi hoặc đáp án chưa hợp lệ.');
+    }
+    final key = _keys[questionId]!;
+    final review = AnswerReview(
+      questionId: questionId,
+      selectedOption: selectedOption,
+      correctOption: key.$1,
+      explanation: key.$2,
+    );
+    _practice[questionId] = (quizId, review, _answeredNow());
+    return review;
+  }
+
+  @override
+  Future<List<WrongQuizAnswer>> listWrongAnswers({String? subjectId}) async {
+    final latest = <String, (String, AnswerReview, DateTime)>{};
+    for (final attempt in _attempts) {
+      for (final answer in attempt.review) {
+        final previous = latest[answer.questionId];
+        if (previous == null || !attempt.submittedAt.isBefore(previous.$3)) {
+          latest[answer.questionId] = (
+            attempt.quizId,
+            answer,
+            attempt.submittedAt,
+          );
+        }
+      }
+    }
+    for (final entry in _practice.entries) {
+      final previous = latest[entry.key];
+      if (previous == null || !entry.value.$3.isBefore(previous.$3)) {
+        latest[entry.key] = entry.value;
+      }
+    }
+    final result = <WrongQuizAnswer>[];
+    for (final value in latest.values) {
+      final quiz = _quiz(value.$1);
+      final answer = value.$2;
+      if ((subjectId == null || quiz.subjectId == subjectId) &&
+          answer.selectedOption != answer.correctOption) {
+        result.add(
+          WrongQuizAnswer(
+            quizId: quiz.id,
+            quizTitle: quiz.title,
+            subjectId: quiz.subjectId,
+            chapterId: quiz.chapterId,
+            question: _quizQuestions(
+              quiz.id,
+            ).firstWhere((q) => q.id == answer.questionId),
+            selectedOption: answer.selectedOption,
+            correctOption: answer.correctOption,
+            explanation: answer.explanation,
+            answeredAt: value.$3,
+          ),
+        );
+      }
+    }
+    result.sort((a, b) => b.answeredAt.compareTo(a.answeredAt));
+    return result;
+  }
+
   @override
   Future<List<ChatThread>> listThreads() async => List.unmodifiable(_threads);
   @override

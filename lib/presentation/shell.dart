@@ -5,6 +5,8 @@ import 'app_footer.dart';
 import 'calendar_page.dart';
 import 'design_system.dart';
 import 'home_page.dart';
+import 'quiz_page.dart';
+import 'quiz_ai_launcher.dart';
 import 'statistics_page.dart';
 import 'widgets.dart';
 
@@ -18,11 +20,13 @@ class VstudyShell extends StatefulWidget {
 }
 
 class _VstudyShellState extends State<VstudyShell> {
-  final _navigators = List.generate(5, (_) => GlobalKey<NavigatorState>());
-  final _epochs = List.generate(5, (_) => ValueNotifier<int>(0));
-  final _canHandleBack = List.filled(5, false);
+  final _navigators = List.generate(6, (_) => GlobalKey<NavigatorState>());
+  final _epochs = List.generate(6, (_) => ValueNotifier<int>(0));
+  final _canHandleBack = List.filled(6, false);
   final _visited = <int>{2};
   int _index = 2;
+  int _footerIndex = 2;
+  String? _aiPrompt;
 
   void _select(int index) {
     final repeat = _index == index;
@@ -35,8 +39,23 @@ class _VstudyShellState extends State<VstudyShell> {
     setState(() {
       _visited.add(index);
       _index = index;
+      _footerIndex = index;
     });
   }
+
+  void _openAi(String? prompt) {
+    if (prompt != null || _aiPrompt != null) {
+      _navigators[5].currentState?.popUntil((route) => route.isFirst);
+      _aiPrompt = prompt;
+      _epochs[5].value++;
+    }
+    setState(() {
+      _visited.add(5);
+      _index = 5;
+    });
+  }
+
+  void _closeAi() => setState(() => _index = _footerIndex);
 
   @override
   void dispose() {
@@ -48,12 +67,7 @@ class _VstudyShellState extends State<VstudyShell> {
 
   Widget _page(int index) => switch (index) {
     0 => CalendarPage(useCases: widget.useCases),
-    1 => _FeatureFrame(
-      title: 'Hỏi đáp',
-      preview: widget.preview,
-      useCases: widget.useCases,
-      child: AiPage(useCases: widget.useCases),
-    ),
+    1 => QuizPage(useCases: widget.useCases),
     2 => HomePage(useCases: widget.useCases, onNavigate: _select),
     3 => _FeatureFrame(
       title: 'Thống kê học tập',
@@ -61,7 +75,14 @@ class _VstudyShellState extends State<VstudyShell> {
       useCases: widget.useCases,
       child: StatisticsPage(useCases: widget.useCases),
     ),
-    _ => DocumentsPage(useCases: widget.useCases),
+    4 => DocumentsPage(useCases: widget.useCases),
+    _ => _FeatureFrame(
+      title: 'Trợ lý V-study',
+      preview: widget.preview,
+      useCases: widget.useCases,
+      onBack: _closeAi,
+      child: AiPage(useCases: widget.useCases, initialPrompt: _aiPrompt),
+    ),
   };
 
   Widget _tab(int index) {
@@ -95,39 +116,46 @@ class _VstudyShellState extends State<VstudyShell> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope<Object?>(
-    canPop: _index == 2 && !_canHandleBack[_index],
-    onPopInvokedWithResult: (didPop, result) {
-      if (didPop) {
-        return;
-      }
-      if (_canHandleBack[_index]) {
-        _navigators[_index].currentState?.maybePop(result);
-      } else if (_index != 2) {
-        _select(2);
-      }
-    },
-    child: Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: VstudyColors.background),
-        child: SafeArea(
-          bottom: false,
-          child: IndexedStack(index: _index, children: List.generate(5, _tab)),
+  Widget build(BuildContext context) => QuizAiLauncher(
+    onOpen: _openAi,
+    child: PopScope<Object?>(
+      canPop: _index == 2 && !_canHandleBack[_index],
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          return;
+        }
+        if (_canHandleBack[_index]) {
+          _navigators[_index].currentState?.maybePop(result);
+        } else if (_index == 5) {
+          _closeAi();
+        } else if (_index != 2) {
+          _select(2);
+        }
+      },
+      child: Scaffold(
+        body: DecoratedBox(
+          decoration: const BoxDecoration(gradient: VstudyColors.background),
+          child: SafeArea(
+            bottom: false,
+            child: IndexedStack(
+              index: _index,
+              children: List.generate(6, _tab),
+            ),
+          ),
         ),
+        bottomNavigationBar: VstudyFooter(
+          selectedIndex: _footerIndex,
+          onSelected: _select,
+        ),
+        floatingActionButton: _index != 5
+            ? FloatingActionButton.small(
+                key: const ValueKey('open-ai'),
+                tooltip: 'Hỏi trợ lý V-study',
+                onPressed: () => _openAi(null),
+                child: const Icon(Icons.auto_awesome),
+              )
+            : null,
       ),
-      bottomNavigationBar: VstudyFooter(
-        selectedIndex: _index,
-        onSelected: _select,
-      ),
-      floatingActionButton:
-          (_index == 0 || _index == 2) && !_canHandleBack[_index]
-          ? FloatingActionButton.small(
-              key: const ValueKey('open-ai'),
-              tooltip: 'Hỏi trợ lý V-study',
-              onPressed: () => _select(1),
-              child: const Icon(Icons.auto_awesome),
-            )
-          : null,
     ),
   );
 }
@@ -138,7 +166,9 @@ class _FeatureFrame extends StatelessWidget {
     required this.child,
     required this.preview,
     required this.useCases,
+    this.onBack,
   });
+  final VoidCallback? onBack;
   final String title;
   final Widget child;
   final bool preview;
@@ -150,6 +180,12 @@ class _FeatureFrame extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
         child: Row(
           children: [
+            if (onBack != null)
+              IconButton(
+                tooltip: 'Quay lại',
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back),
+              ),
             Expanded(
               child: Text(
                 title,

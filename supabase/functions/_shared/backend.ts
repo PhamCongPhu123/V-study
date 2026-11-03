@@ -93,7 +93,7 @@ export class Backend {
   }
 
   async ownedRow<T>(
-    table: "chat_threads" | "documents",
+    table: "chat_threads" | "documents" | "subjects" | "quiz_chapters",
     id: string,
     owner: string,
     fields: string,
