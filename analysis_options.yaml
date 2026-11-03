@@ -3,3 +3,6 @@ analyzer:
   exclude:
     - design_reference/**
     - build/**
+    - android/**
+    - ios/**
+    - web/**
