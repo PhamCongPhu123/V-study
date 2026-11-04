@@ -42,6 +42,32 @@ Trong Supabase Dashboard:
 3. Cấu hình SMTP trong mục Email/SMTP nếu cần gửi đến người dùng thật. Dịch vụ gửi email mặc định của Supabase có hạn mức và giới hạn địa chỉ nhận; đăng ký không gửi được có thể do cấu hình này. Kiểm tra Auth Logs và SMTP khi gặp lỗi gửi.
 4. Nếu đã tùy chỉnh email template, giữ đường dẫn xác thực theo `{{ .ConfirmationURL }}` cho luồng PKCE này. Template tự chế chỉ gửi token hoặc chỉ chuyển thẳng tới app sẽ cần luồng xử lý khác.
 
+## Kiểm tra khi không đăng ký hoặc đăng nhập được
+
+Supabase Auth tự quản lý tài khoản trong `auth.users`; xem danh sách tại **Authentication → Users**. Bảng `public.profiles` chỉ chứa hồ sơ học tập liên kết theo ID tài khoản. Không tự tạo thêm bảng `users` trong schema `public` để sửa lỗi đăng nhập.
+
+1. Trong Authentication → Users, tìm email đã dùng. Nếu chưa có tài khoản, chọn **Đăng ký** trong app; một địa chỉ email có sẵn không tự trở thành tài khoản Vstudy. Nếu có nhưng chưa xác nhận, mở email xác nhận hoặc dùng nút gửi lại trong app.
+2. Kiểm tra Email provider và cho phép đăng ký trong Authentication. Nếu đăng ký báo không gửi được email, kiểm tra SMTP và giới hạn người nhận của dịch vụ email mặc định Supabase.
+3. Mở **Logs → Auth** trong Supabase, thử lại một lần và xem lỗi tại thời điểm đó. `invalid_credentials` liên quan thông tin đăng nhập; `email_not_confirmed` yêu cầu xác nhận; lỗi gửi email hoặc `Database error saving new user` cần kiểm tra cấu hình SMTP hoặc trigger hồ sơ. Không đăng nhập trực tiếp vào database bằng mật khẩu ứng dụng.
+4. Nếu cần kiểm tra schema, chạy query **chỉ đọc** sau trong SQL Editor. `true` cho biết bảng hoặc trigger tương ứng hiện có; query không tạo hay sửa dữ liệu:
+
+```sql
+select
+  to_regclass('auth.users') is not null as auth_users_exists,
+  to_regclass('public.profiles') is not null as profiles_exists,
+  exists (
+    select 1
+    from pg_trigger t
+    where t.tgrelid = to_regclass('auth.users')
+      and t.tgname = 'on_auth_user_created'
+      and t.tgfoid = to_regprocedure('public.handle_new_user()')
+      and not t.tgisinternal
+      and t.tgenabled in ('O', 'A')
+  ) as profile_trigger_enabled;
+```
+
+Nếu `profiles_exists` hoặc `profile_trigger_enabled` là `false`, hãy kiểm tra lịch sử cài schema trước khi sửa; migration ban đầu không được thiết kế chạy lặp trên database đã có dữ liệu. Nếu cần hỗ trợ, chia sẻ kết quả ba cột và **mã lỗi** trong Auth Logs; xóa email, mật khẩu, khóa, token và đường dẫn xác nhận khỏi thông tin gửi đi.
+
 Chạy:
 
 ```powershell

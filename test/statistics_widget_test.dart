@@ -252,6 +252,36 @@ Future<void> _openStatistics(
 }
 
 void main() {
+  testWidgets('statistics action buttons are centered on the screen', (
+    tester,
+  ) async {
+    await _openStatistics(tester, _MemoryAnalytics());
+    for (final entry in <(String, String)>[
+      ('stats-quiz', 'stats-practice-wrong'),
+      ('stats-subjects', 'stats-subject-course'),
+      ('stats-goals', 'stats-edit-goals'),
+      ('stats-weekly-report', 'stats-copy-report'),
+    ]) {
+      await _tapKey(tester, entry.$1);
+      final button = find.byKey(ValueKey(entry.$2));
+      if (button.evaluate().isEmpty) {
+        final scrollable = find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is Scrollable &&
+                  (widget.axisDirection == AxisDirection.down ||
+                      widget.axisDirection == AxisDirection.up),
+            )
+            .last;
+        await tester.scrollUntilVisible(button, 180, scrollable: scrollable);
+      }
+      await tester.ensureVisible(button);
+      expect(tester.getCenter(button).dx, closeTo(215, 1));
+      expect(tester.takeException(), isNull);
+      await _back(tester);
+    }
+  });
+
   testWidgets('all seven statistics destinations retain footer and AI', (
     tester,
   ) async {

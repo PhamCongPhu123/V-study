@@ -21,6 +21,9 @@ class CalendarPage extends StatefulWidget {
 enum _CalendarRange { day, week, month }
 
 class _CalendarPageState extends State<CalendarPage> {
+  static const _timelineLeftPadding = 14.0;
+  static const _timelineRightPadding = 16.0;
+  static const _timelineLabelWidth = 42.0;
   DateTime _selected = DateTime.now();
   _CalendarRange _range = _CalendarRange.day;
   late Future<List<StudyEvent>> _events;
@@ -486,7 +489,13 @@ class _CalendarPageState extends State<CalendarPage> {
   );
 
   Widget _weekStrip(List<StudyEvent> events) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
+    // Align week headers with the seven timeline columns after the hour labels.
+    padding: daysAreNarrow
+        ? const EdgeInsets.only(
+            left: _timelineLeftPadding + _timelineLabelWidth,
+            right: _timelineRightPadding,
+          )
+        : const EdgeInsets.symmetric(horizontal: 16),
     child: Row(
       children: List.generate(7, (index) {
         final date = DateTime(
@@ -508,6 +517,9 @@ class _CalendarPageState extends State<CalendarPage> {
               selected: selected,
               button: true,
               child: InkWell(
+                key: ValueKey(
+                  'calendar-day-${DateFormat('yyyy-MM-dd').format(date)}',
+                ),
                 onTap: () => _selectDate(date),
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
@@ -580,6 +592,8 @@ class _CalendarPageState extends State<CalendarPage> {
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: _dateNavigation(),
         ),
+        if (daysAreNarrow && selectedEvents.isNotEmpty)
+          _weekSelectedEvents(selectedEvents),
         if (_range == _CalendarRange.day)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
@@ -597,15 +611,23 @@ class _CalendarPageState extends State<CalendarPage> {
               final rowHeight = ((constraints.maxHeight - 16) / 24)
                   .clamp(24.0, 40.0)
                   .toDouble();
-              const labelWidth = 42.0;
+              const labelWidth = _timelineLabelWidth;
               final contentWidth = math.max(
                 0.0,
-                constraints.maxWidth - labelWidth - 30,
+                constraints.maxWidth -
+                    labelWidth -
+                    _timelineLeftPadding -
+                    _timelineRightPadding,
               );
               final columnWidth = contentWidth / days.length;
               return SingleChildScrollView(
                 controller: _timelineScroll,
-                padding: const EdgeInsets.fromLTRB(14, 6, 16, 18),
+                padding: const EdgeInsets.fromLTRB(
+                  _timelineLeftPadding,
+                  6,
+                  _timelineRightPadding,
+                  18,
+                ),
                 child: SizedBox(
                   height: 24 * rowHeight + 16,
                   child: Stack(
@@ -665,6 +687,45 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
+  Widget _weekSelectedEvents(List<StudyEvent> events) => SizedBox(
+    height: 40,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+      itemCount: events.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final event = events[index];
+        final color = _eventColor(event);
+        return Material(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            key: ValueKey('calendar-week-event-${event.id}'),
+            borderRadius: BorderRadius.circular(8),
+            onTap: _mutating ? null : () => _details(event),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 220),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              child: Text(
+                '${DateFormat('HH:mm').format(event.startsAt.toLocal())} – ${DateFormat('HH:mm').format(event.endsAt.toLocal())} · ${event.title}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: color.computeLuminance() < .35
+                      ? Colors.white
+                      : VstudyColors.navy,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+
   List<Widget> _timelineBlocks(
     List<StudyEvent> events,
     DateTime date,
@@ -712,7 +773,14 @@ class _CalendarPageState extends State<CalendarPage> {
         (placement.end - placement.start) / 60 * rowHeight - 3,
       );
       final event = placement.event;
+      final color = _eventColor(event);
+      final textColor = color.computeLuminance() < .35
+          ? Colors.white
+          : VstudyColors.navy;
       return Positioned(
+        key: ValueKey(
+          'calendar-block-${event.id}-${DateFormat('yyyy-MM-dd').format(date)}',
+        ),
         top: placement.start / 60 * rowHeight + 5,
         left:
             labelWidth +
@@ -723,12 +791,12 @@ class _CalendarPageState extends State<CalendarPage> {
         height: height,
         child: Semantics(
           label:
-              '${event.title}, ${_kindLabel(event.kind)}, ${DateFormat('HH:mm').format(event.startsAt.toLocal())}',
+              '${event.title}, ${_kindLabel(event.kind)}, ${DateFormat('HH:mm').format(event.startsAt.toLocal())} đến ${DateFormat('HH:mm').format(event.endsAt.toLocal())}',
           button: true,
           child: Tooltip(
             message: event.title,
             child: Material(
-              color: _eventColor(event),
+              color: color,
               elevation: 1,
               shadowColor: VstudyColors.navy.withValues(alpha: .12),
               borderRadius: BorderRadius.circular(daysAreNarrow ? 5 : 14),
@@ -737,8 +805,8 @@ class _CalendarPageState extends State<CalendarPage> {
                 onTap: _mutating ? null : () => _details(event),
                 child: ClipRect(
                   child: Padding(
-                    padding: EdgeInsets.all(daysAreNarrow ? 3 : 6),
-                    child: width < 68 || height < 25
+                    padding: EdgeInsets.all(daysAreNarrow ? 2 : 6),
+                    child: width < 20 || height < 14
                         ? const SizedBox.shrink()
                         : SingleChildScrollView(
                             physics: const NeverScrollableScrollPhysics(),
@@ -747,26 +815,34 @@ class _CalendarPageState extends State<CalendarPage> {
                               children: [
                                 Text(
                                   event.title,
-                                  maxLines: 1,
+                                  maxLines: daysAreNarrow && height >= 55
+                                      ? 2
+                                      : 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 11,
+                                  style: TextStyle(
+                                    fontSize: daysAreNarrow ? 9 : 11,
                                     height: 1.15,
                                     fontWeight: FontWeight.w800,
-                                    color: VstudyColors.navy,
+                                    color: textColor,
                                   ),
                                 ),
-                                if (height >= 39) ...[
+                                if (height >= (daysAreNarrow ? 30 : 39) &&
+                                    width >= (daysAreNarrow ? 30 : 68)) ...[
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${DateFormat('HH:mm').format(event.startsAt.toLocal())} – ${DateFormat('HH:mm').format(event.endsAt.toLocal())}'
-                                    '${event.location.isEmpty ? '' : ' · ${event.location}'}',
-                                    maxLines: 1,
+                                    daysAreNarrow
+                                        ? '${DateFormat('HH:mm').format(event.startsAt.toLocal())}'
+                                              '${height >= 43 ? '\n${DateFormat('HH:mm').format(event.endsAt.toLocal())}' : ''}'
+                                        : '${DateFormat('HH:mm').format(event.startsAt.toLocal())} – ${DateFormat('HH:mm').format(event.endsAt.toLocal())}'
+                                              '${event.location.isEmpty ? '' : ' · ${event.location}'}',
+                                    maxLines: daysAreNarrow && height >= 43
+                                        ? 2
+                                        : 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 9,
                                       height: 1.15,
-                                      color: VstudyColors.navy,
+                                      color: textColor,
                                     ),
                                   ),
                                 ],
@@ -979,7 +1055,8 @@ class _CalendarPageState extends State<CalendarPage> {
   );
 
   Widget _legend() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    // Leave room for the persistent AI button at the lower right of the shell.
+    padding: const EdgeInsets.fromLTRB(8, 10, 64, 10),
     child: Wrap(
       spacing: 16,
       runSpacing: 8,

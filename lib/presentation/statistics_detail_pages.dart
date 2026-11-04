@@ -297,8 +297,8 @@ class _QuizStatisticsPageState extends State<QuizStatisticsPage> {
             style: TextStyle(fontSize: 10, color: VstudyColors.muted),
           ),
           const SizedBox(height: 28),
-          Padding(
-            padding: const EdgeInsets.only(right: 52),
+          SizedBox(
+            width: double.infinity,
             child: FilledButton(
               key: const ValueKey('stats-practice-wrong'),
               onPressed: _openingPractice ? null : _practice,
@@ -474,8 +474,8 @@ class _SubjectStatisticsPageState extends State<SubjectStatisticsPage> {
             ),
           ),
           const SizedBox(height: 28),
-          Padding(
-            padding: const EdgeInsets.only(right: 52),
+          SizedBox(
+            width: double.infinity,
             child: FilledButton(
               key: const ValueKey('stats-subject-course'),
               onPressed: () => _openCourse(subject),
@@ -772,8 +772,8 @@ class _GoalsStatisticsPageState extends State<GoalsStatisticsPage> {
             ),
           ),
           const SizedBox(height: 28),
-          Padding(
-            padding: const EdgeInsets.only(right: 52),
+          SizedBox(
+            width: double.infinity,
             child: FilledButton(
               key: const ValueKey('stats-edit-goals'),
               onPressed: () => _editGoals(goals),

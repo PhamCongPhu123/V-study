@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/app_exception.dart';
 import '../domain/entities.dart';
@@ -99,7 +100,7 @@ class SupabaseAuthRepository implements AuthRepository, AuthFlowRepository {
     try {
       return await operation();
     } on AuthException catch (error) {
-      final reason = switch (error.code) {
+      final reason = switch (_authErrorCode(error)) {
         'email_not_confirmed' => AuthFailureReason.unconfirmedEmail,
         'over_email_send_rate_limit' ||
         'over_request_rate_limit' => AuthFailureReason.rateLimited,
@@ -107,6 +108,9 @@ class SupabaseAuthRepository implements AuthRepository, AuthFlowRepository {
         'flow_state_expired' ||
         'flow_state_not_found' ||
         'bad_code_verifier' => AuthFailureReason.linkExpired,
+        'invalid_api_key' ||
+        'database_error_saving_new_user' ||
+        'error_sending_confirmation_email' => AuthFailureReason.unavailable,
         _ => AuthFailureReason.authentication,
       };
       throw AuthFailure(authErrorMessage(error), reason);
@@ -174,13 +178,55 @@ class SupabaseAuthRepository implements AuthRepository, AuthFlowRepository {
   });
 }
 
+// Older Auth responses and gateway errors can omit a machine-readable code.
+// Match only known, exact provider messages; never return the raw response.
+String? _authErrorCode(AuthException error) {
+  if (error is AuthWeakPasswordException) {
+    return 'weak_password';
+  }
+  var message = error.message.trim();
+  if (message.startsWith('{') && message.length <= 4096) {
+    try {
+      final value = jsonDecode(message);
+      if (value is Map) {
+        final detail =
+            value['msg'] ?? value['message'] ?? value['error_description'];
+        if (detail is String) {
+          message = detail.trim();
+        }
+      }
+    } on FormatException {
+      // Unknown messages remain generic and are never displayed to the user.
+    }
+  }
+  return switch (message.toLowerCase()) {
+    'invalid login credentials' => 'invalid_credentials',
+    'email not confirmed' => 'email_not_confirmed',
+    'invalid api key' => 'invalid_api_key',
+    'signups not allowed for this instance' => 'signup_disabled',
+    'email rate limit exceeded' => 'over_email_send_rate_limit',
+    'error sending confirmation email' => 'error_sending_confirmation_email',
+    'database error saving new user' => 'database_error_saving_new_user',
+    _ => error.code,
+  };
+}
+
 String authErrorMessage(Object error) {
   if (error is! AuthException) {
     return 'Không kết nối được dịch vụ tài khoản. Vui lòng thử lại.';
   }
-  return switch (error.code) {
-    'invalid_credentials' ||
-    'invalid_grant' => 'Email hoặc mật khẩu không đúng.',
+  final code = _authErrorCode(error);
+  if (error.statusCode == '429') {
+    return 'Bạn thao tác quá nhanh. Vui lòng đợi một lát rồi thử lại.';
+  }
+  if (code == null && error is AuthRetryableFetchException) {
+    return error.statusCode == null
+        ? 'Không kết nối được dịch vụ tài khoản. Hãy kiểm tra mạng rồi thử lại.'
+        : 'Dịch vụ tài khoản đang gặp lỗi. Vui lòng thử lại sau.';
+  }
+  return switch (code) {
+    'invalid_credentials' || 'invalid_grant' =>
+      'Email hoặc mật khẩu không đúng. Nếu chưa có tài khoản, hãy đăng ký trước.',
     'email_not_confirmed' => 'Vui lòng xác nhận email trước khi đăng nhập.',
     'user_already_exists' || 'email_exists' =>
       'Không thể đăng ký email này. Bạn có thể đăng nhập hoặc đặt lại mật khẩu.',
@@ -189,11 +235,17 @@ String authErrorMessage(Object error) {
     'weak_password' => 'Mật khẩu chưa đủ mạnh theo chính sách của hệ thống.',
     'same_password' => 'Mật khẩu mới cần khác mật khẩu hiện tại.',
     'signup_disabled' => 'Đăng ký tài khoản hiện chưa được bật.',
+    'email_provider_disabled' => 'Đăng nhập bằng email hiện chưa được bật.',
+    'invalid_api_key' =>
+      'Ứng dụng chưa kết nối được với dịch vụ tài khoản. Vui lòng kiểm tra cấu hình Supabase.',
+    'user_banned' => 'Tài khoản đang bị hạn chế. Vui lòng liên hệ hỗ trợ.',
+    'error_sending_confirmation_email' || 'email_address_not_authorized' =>
+      'Không gửi được email xác nhận. Vui lòng kiểm tra cấu hình gửi email của ứng dụng.',
+    'database_error_saving_new_user' =>
+      'Không thể tạo tài khoản lúc này. Vui lòng kiểm tra cấu hình dịch vụ và thử lại.',
     'provider_disabled' || 'oauth_provider_not_supported' =>
       'Đăng nhập Google hiện chưa được cấu hình.',
     'email_address_invalid' => 'Vui lòng nhập email hợp lệ.',
-    'email_address_not_authorized' =>
-      'Email gửi chưa khả dụng cho địa chỉ này. Vui lòng liên hệ quản trị ứng dụng.',
     'otp_expired' ||
     'flow_state_expired' ||
     'flow_state_not_found' ||

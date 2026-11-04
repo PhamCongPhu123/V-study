@@ -491,8 +491,8 @@ class _ExtraStatisticsPageState extends State<_ExtraStatisticsPage> {
       ),
     ),
     const SizedBox(height: 18),
-    Padding(
-      padding: const EdgeInsets.only(right: 48),
+    SizedBox(
+      width: double.infinity,
       child: FilledButton.icon(
         key: const ValueKey('stats-copy-report'),
         onPressed: () async {

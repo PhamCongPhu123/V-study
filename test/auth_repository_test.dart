@@ -85,6 +85,30 @@ void main() {
     },
   );
 
+  test('known legacy auth responses produce useful safe messages', () {
+    expect(
+      authErrorMessage(const AuthException('Invalid login credentials')),
+      contains('Email hoặc mật khẩu không đúng'),
+    );
+    expect(
+      authErrorMessage(const AuthException('Invalid API key')),
+      contains('cấu hình Supabase'),
+    );
+    expect(
+      authErrorMessage(
+        AuthRetryableFetchException(
+          message: '{"msg":"Error sending confirmation email"}',
+          statusCode: '500',
+        ),
+      ),
+      contains('Không gửi được email xác nhận'),
+    );
+    expect(
+      authErrorMessage(const AuthException('private provider detail')),
+      isNot(contains('private provider detail')),
+    );
+  });
+
   group('Supabase auth transport', () {
     late HttpServer server;
     late SupabaseClient client;
@@ -92,8 +116,12 @@ void main() {
     late _Storage storage;
     late List<({String method, Uri uri, Map<String, dynamic>? body})> calls;
     String? failure;
+    String? legacyMessage;
+    var failureStatus = HttpStatus.badRequest;
     setUp(() async {
       failure = null;
+      legacyMessage = null;
+      failureStatus = HttpStatus.badRequest;
       calls = [];
       storage = _Storage();
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -104,7 +132,10 @@ void main() {
             : jsonDecode(text) as Map<String, dynamic>;
         calls.add((method: request.method, uri: request.uri, body: body));
         request.response.headers.contentType = ContentType.json;
-        if (failure != null) {
+        if (legacyMessage != null) {
+          request.response.statusCode = failureStatus;
+          request.response.write(jsonEncode({'msg': legacyMessage}));
+        } else if (failure != null) {
           request.response.statusCode = HttpStatus.badRequest;
           request.response.write(
             jsonEncode({
@@ -187,6 +218,47 @@ void main() {
       );
       expect(repository.currentUser, isNull);
     });
+    test(
+      'legacy unconfirmed-email response still allows confirmation resend',
+      () async {
+        legacyMessage = 'Email not confirmed';
+        await expectLater(
+          repository.signIn('an@example.com', 'password123'),
+          throwsA(
+            isA<AuthFailure>().having(
+              (error) => error.reason,
+              'reason',
+              AuthFailureReason.unconfirmedEmail,
+            ),
+          ),
+        );
+        expect(repository.currentUser, isNull);
+      },
+    );
+    test(
+      'signup database failure is reported safely without a session',
+      () async {
+        legacyMessage = 'Database error saving new user';
+        failureStatus = HttpStatus.internalServerError;
+        await expectLater(
+          repository.signUp('An', 'an@example.com', 'password123'),
+          throwsA(
+            isA<AuthFailure>()
+                .having(
+                  (error) => error.reason,
+                  'reason',
+                  AuthFailureReason.unavailable,
+                )
+                .having(
+                  (error) => error.message,
+                  'message',
+                  contains('Không thể tạo tài khoản'),
+                ),
+          ),
+        );
+        expect(repository.currentUser, isNull);
+      },
+    );
     test(
       'confirmation resend uses signup OTP and the configured callback',
       () async {
