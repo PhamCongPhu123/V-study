@@ -1,0 +1,33 @@
+Toán học
+Ghi chú ôn tập khởi tạo cho Vstudy
+Đây là nội dung tham khảo, không phải giáo trình chính thức. Đối chiếu với tài liệu môn học.
+
+1. 2 + 3 bằng bao nhiêu?
+Ý chính: 5. Cộng 2 với 3 được 5.
+
+2. Đạo hàm của x² là gì?
+Ý chính: 2x. Áp dụng quy tắc đạo hàm của hàm lũy thừa.
+
+3. Tổng ba góc trong một tam giác Euclid bằng bao nhiêu?
+Ý chính: 180°. Tổng ba góc trong của tam giác Euclid bằng 180°.
+
+4. Giá trị của 3² là bao nhiêu?
+Ý chính: 9. 3² = 3 × 3 = 9.
+
+5. Nghiệm của 2x = 10 là gì?
+Ý chính: x = 5. Chia hai vế cho 2.
+
+6. Xác suất xuất hiện mặt ngửa khi tung một đồng xu cân đối là bao nhiêu?
+Ý chính: 1/2. Hai kết quả ngửa và sấp có khả năng bằng nhau.
+
+7. Trung bình cộng của 2, 4 và 6 là bao nhiêu?
+Ý chính: 4. (2 + 4 + 6) / 3 = 4.
+
+8. Đạo hàm của một hằng số là gì?
+Ý chính: 0. Hằng số không thay đổi theo biến số.
+
+9. Diện tích hình chữ nhật có chiều dài 5 và chiều rộng 3 là bao nhiêu?
+Ý chính: 15. Diện tích bằng chiều dài nhân chiều rộng.
+
+10. Một nguyên hàm của 2x là gì?
+Ý chính: x². Đạo hàm của x² bằng 2x; nguyên hàm tổng quát thêm hằng số C.

@@ -1,0 +1,33 @@
+Thiết kế UX/UI
+Ghi chú ôn tập khởi tạo cho Vstudy
+Đây là nội dung tham khảo, không phải giáo trình chính thức. Đối chiếu với tài liệu môn học.
+
+1. Wireframe chủ yếu mô tả điều gì?
+Ý chính: Bố cục và cấu trúc màn hình. Wireframe giúp thống nhất cấu trúc trước khi hoàn thiện thị giác.
+
+2. Prototype tương tác giúp kiểm tra điều gì?
+Ý chính: Luồng thao tác trước khi lập trình đầy đủ. Prototype mô phỏng hành vi để đánh giá luồng trải nghiệm.
+
+3. Usability testing thường được thực hiện bằng cách nào?
+Ý chính: Quan sát người dùng thực hiện nhiệm vụ. Quan sát nhiệm vụ giúp phát hiện trở ngại thực tế.
+
+4. Phản hồi sau thao tác giúp người dùng biết điều gì?
+Ý chính: Hệ thống đã tiếp nhận thao tác hay chưa. Trạng thái tải, thành công và lỗi giúp người dùng hiểu kết quả thao tác.
+
+5. Tương phản chữ và nền phù hợp hỗ trợ điều gì?
+Ý chính: Khả năng đọc. Tương phản là một yếu tố quan trọng của khả năng tiếp cận.
+
+6. User flow mô tả điều gì?
+Ý chính: Chuỗi bước để đạt một mục tiêu. User flow tập trung vào hành trình thực hiện nhiệm vụ.
+
+7. Thiết kế nhất quán giúp ích như thế nào?
+Ý chính: Giảm việc phải học lại cách thao tác. Mẫu tương tác quen thuộc giúp người dùng dự đoán hành vi.
+
+8. Thông báo lỗi tốt nên có đặc điểm nào?
+Ý chính: Nêu vấn đề và cách khắc phục phù hợp. Thông báo rõ ràng giúp người dùng tiếp tục nhiệm vụ.
+
+9. Persona thường được xây dựng dựa trên nguồn nào?
+Ý chính: Nghiên cứu về nhóm người dùng. Persona tổng hợp nhu cầu và hành vi dựa trên nghiên cứu.
+
+10. Khoảng trắng trong giao diện có tác dụng gì?
+Ý chính: Phân nhóm và tạo thứ bậc nội dung. Khoảng trắng giúp bố cục dễ đọc và phân biệt các nhóm.

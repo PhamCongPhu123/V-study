@@ -1,0 +1,33 @@
+Quản trị dự án
+Ghi chú ôn tập khởi tạo cho Vstudy
+Đây là nội dung tham khảo, không phải giáo trình chính thức. Đối chiếu với tài liệu môn học.
+
+1. Dự án thường có đặc điểm nào?
+Ý chính: Có mục tiêu và thời hạn xác định. Dự án là nỗ lực có thời hạn để tạo kết quả cụ thể.
+
+2. WBS dùng để làm gì?
+Ý chính: Phân rã phạm vi công việc. WBS chia công việc thành các phần dễ quản lý.
+
+3. Stakeholder là ai?
+Ý chính: Bên có liên quan hoặc bị ảnh hưởng bởi dự án. Các bên liên quan có lợi ích hoặc ảnh hưởng tới dự án.
+
+4. Critical path thường chỉ điều gì?
+Ý chính: Chuỗi công việc quyết định thời gian hoàn thành dự án. Chậm trễ trên đường găng có thể làm chậm ngày hoàn thành.
+
+5. Quản lý rủi ro bắt đầu bằng bước nào?
+Ý chính: Nhận diện rủi ro. Cần nhận diện trước khi phân tích và chọn cách ứng phó.
+
+6. Milestone là gì?
+Ý chính: Mốc quan trọng của dự án. Milestone đánh dấu một sự kiện hay kết quả quan trọng.
+
+7. Scope creep mô tả tình huống nào?
+Ý chính: Phạm vi tăng không được kiểm soát. Thay đổi phạm vi không kiểm soát gây ảnh hưởng tiến độ và nguồn lực.
+
+8. Kanban thường dùng để làm gì?
+Ý chính: Trực quan hóa trạng thái công việc. Bảng Kanban giúp theo dõi luồng công việc.
+
+9. Retrospective trong nhóm giúp làm gì?
+Ý chính: Nhìn lại và cải tiến cách làm việc. Nhóm học từ trải nghiệm để điều chỉnh cách phối hợp.
+
+10. Kế hoạch truyền thông xác định điều gì?
+Ý chính: Ai cần thông tin gì, khi nào và qua kênh nào. Truyền thông phù hợp giúp các bên liên quan phối hợp hiệu quả.

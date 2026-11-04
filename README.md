@@ -127,6 +127,8 @@ Chi tiết: [kiến trúc và ranh giới bảo mật](docs/architecture.md), [A
 
 ## Chuẩn bị Supabase
 
+Muốn tài khoản mới có nhiều nội dung như bản xem thử, dùng [bộ dữ liệu khởi tạo đầy đủ](sample_data/README.md): 5 môn, 30 Quiz mới, lịch 8 tuần và lịch sử học 180 ngày. Chạy file SQL theo email tài khoản; lịch sử khởi tạo sẽ được tính vào thống kê. Có gói 5 tài liệu TXT thật để tải lên thư viện.
+
 Cần Flutter stable **>=3.35**, Dart **>=3.9**, Android SDK để chạy Android; iOS cần macOS/Xcode. Backend có thể dùng Supabase hosted hoặc Supabase CLI + Docker để chạy cục bộ.
 
 Với dự án Supabase **mới dành cho Vstudy**, chạy từ thư mục repository:
