@@ -14,6 +14,9 @@ import 'shell.dart';
 export 'auth_page.dart';
 export 'password_recovery_page.dart';
 
+AuthFlowRepository? _authFlow(AuthRepository auth) =>
+    auth is AuthFlowRepository ? auth : null;
+
 class VstudyApp extends StatelessWidget {
   const VstudyApp({
     super.key,
@@ -134,8 +137,8 @@ class _AuthGateState extends State<_AuthGate> {
   void initState() {
     super.initState();
     _user = widget.useCases.auth.currentUser;
-    final initialFlow = widget.useCases.auth;
-    if (initialFlow is AuthFlowRepository) {
+    final initialFlow = _authFlow(widget.useCases.auth);
+    if (initialFlow != null) {
       _recovery = initialFlow.isPasswordRecovery;
       final notice = initialFlow.takePendingAuthNotice();
       if (notice != null) {
@@ -149,8 +152,8 @@ class _AuthGateState extends State<_AuthGate> {
       final accountChanged = _user?.id != user?.id;
       setState(() {
         _user = user;
-        final flow = widget.useCases.auth;
-        if (flow is AuthFlowRepository) {
+        final flow = _authFlow(widget.useCases.auth);
+        if (flow != null) {
           _recovery = flow.isPasswordRecovery;
         }
         if (user == null) {
@@ -209,8 +212,8 @@ class _AuthGateState extends State<_AuthGate> {
       return PasswordRecoveryPage(
         useCases: widget.useCases,
         onCompleted: () {
-          final flow = widget.useCases.auth;
-          if (flow is AuthFlowRepository) {
+          final flow = _authFlow(widget.useCases.auth);
+          if (flow != null) {
             flow.completePasswordRecovery();
           }
           setState(() {
@@ -222,8 +225,8 @@ class _AuthGateState extends State<_AuthGate> {
         onCancel: () async {
           await widget.useCases.auth.signOut();
           if (mounted) {
-            final flow = widget.useCases.auth;
-            if (flow is AuthFlowRepository) {
+            final flow = _authFlow(widget.useCases.auth);
+            if (flow != null) {
               flow.completePasswordRecovery();
             }
             setState(() {
