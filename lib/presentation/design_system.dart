@@ -17,8 +17,8 @@ abstract final class VstudyColors {
   static const background = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFFF0DBB0), cream, Color(0xFFFAF8F4)],
-    stops: [0, .32, 1],
+    colors: [Color(0xFFF1DDB7), Color(0xFFF9F6EF), Color(0xFFE0E7F6)],
+    stops: [0, .40, 1],
   );
 }
 
@@ -31,12 +31,13 @@ ThemeData vstudyTheme() => ThemeData(
     surface: VstudyColors.paper,
     onSurface: VstudyColors.ink,
   ),
-  scaffoldBackgroundColor: VstudyColors.cream,
+  scaffoldBackgroundColor: Colors.transparent,
   appBarTheme: const AppBarThemeData(
-    backgroundColor: VstudyColors.cream,
+    backgroundColor: Colors.transparent,
     foregroundColor: VstudyColors.ink,
     surfaceTintColor: Colors.transparent,
     elevation: 0,
+    scrolledUnderElevation: 0,
     centerTitle: false,
   ),
   textTheme: ThemeData.light().textTheme.apply(

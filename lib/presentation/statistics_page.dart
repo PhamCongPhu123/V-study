@@ -33,7 +33,6 @@ class StatisticsPage extends StatelessWidget {
             title: 'Thống kê học tập',
             subtitle: 'Thời gian theo tuần, tháng và học kỳ',
             icon: Icons.query_stats_rounded,
-            highlighted: true,
             page: StudyTimeStatisticsPage(useCases: useCases),
           ),
           _destination(
@@ -96,11 +95,10 @@ class StatisticsPage extends StatelessWidget {
     required String subtitle,
     required IconData icon,
     required Widget page,
-    bool highlighted = false,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
     child: Material(
-      color: highlighted ? VstudyColors.navy : Colors.white,
+      color: Colors.white,
       borderRadius: BorderRadius.circular(15),
       child: InkWell(
         key: ValueKey('stats-$id'),
@@ -116,16 +114,10 @@ class StatisticsPage extends StatelessWidget {
                 width: 37,
                 height: 37,
                 decoration: BoxDecoration(
-                  color: highlighted
-                      ? VstudyColors.gold.withValues(alpha: .17)
-                      : VstudyColors.paleGold,
+                  color: VstudyColors.paleGold,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  icon,
-                  size: 21,
-                  color: highlighted ? VstudyColors.gold : VstudyColors.navy,
-                ),
+                child: Icon(icon, size: 21, color: VstudyColors.navy),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -134,31 +126,29 @@ class StatisticsPage extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: highlighted ? Colors.white : VstudyColors.navy,
+                        color: VstudyColors.navy,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 10,
                         height: 1.4,
-                        color: highlighted
-                            ? Colors.white70
-                            : VstudyColors.muted,
+                        color: VstudyColors.muted,
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(
+              const Icon(
                 Icons.chevron_right_rounded,
                 size: 20,
-                color: highlighted ? VstudyColors.gold : VstudyColors.navy,
+                color: VstudyColors.navy,
               ),
             ],
           ),

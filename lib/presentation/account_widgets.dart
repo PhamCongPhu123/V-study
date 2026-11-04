@@ -101,17 +101,13 @@ class AccountFrame extends StatelessWidget {
       data: theme,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: dark
-                ? [const Color(0xFF182033), const Color(0xFF26344C)]
-                : [
-                    const Color(0xFFF1DDB7),
-                    const Color(0xFFF7F5EE),
-                    const Color(0xFFCFD9EE),
-                  ],
-          ),
+          gradient: dark
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF182033), Color(0xFF26344C)],
+                )
+              : VstudyColors.background,
         ),
         child: Scaffold(
           backgroundColor: Colors.transparent,

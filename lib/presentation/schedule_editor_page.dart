@@ -719,14 +719,7 @@ class _ScheduleEditorPageState extends State<ScheduleEditorPage> {
       }
     },
     child: DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFF1DDB7), Color(0xFFF8F6F0), Color(0xFFCFD9EE)],
-          stops: [0, 0.48, 1],
-        ),
-      ),
+      decoration: const BoxDecoration(gradient: VstudyColors.background),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(

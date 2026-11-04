@@ -475,9 +475,9 @@ class _QuizPlayerPageState extends State<QuizPlayerPage>
   Widget build(BuildContext context) => PopScope(
     canPop: !_busy,
     child: Scaffold(
-      backgroundColor: widget.assistantStyle ? const Color(0xFFE1E7F6) : null,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: widget.assistantStyle ? const Color(0xFFF1DDB7) : null,
+        backgroundColor: Colors.transparent,
         title: Text(
           widget.quiz.title,
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
@@ -732,8 +732,8 @@ class _QuizPlayerPageState extends State<QuizPlayerPage>
                   ),
                 ),
               const SizedBox(height: 18),
-              Padding(
-                padding: const EdgeInsets.only(right: 52),
+              SizedBox(
+                width: double.infinity,
                 child: _frozenAnswers != null
                     ? FilledButton(
                         key: const ValueKey('quiz-submit'),

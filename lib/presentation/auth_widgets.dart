@@ -14,14 +14,7 @@ class AuthFrame extends StatelessWidget {
   final bool preview;
   @override
   Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFF1DDB7), Color(0xFFFBF8F0), Color(0xFFC6D6F7)],
-        stops: [0, .43, 1],
-      ),
-    ),
+    decoration: const BoxDecoration(gradient: VstudyColors.background),
     child: Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(

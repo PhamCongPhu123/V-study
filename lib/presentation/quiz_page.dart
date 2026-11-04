@@ -753,7 +753,7 @@ class _QuizCoursePageState extends State<QuizCoursePage> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.transparent,
     appBar: AppBar(
-      backgroundColor: VstudyColors.cream,
+      backgroundColor: Colors.transparent,
       title: Column(
         children: [
           Text(

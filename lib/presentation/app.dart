@@ -32,6 +32,10 @@ class VstudyApp extends StatelessWidget {
     title: 'Vstudy',
     debugShowCheckedModeBanner: false,
     theme: vstudyTheme(),
+    builder: (context, child) => DecoratedBox(
+      decoration: const BoxDecoration(gradient: VstudyColors.background),
+      child: child ?? const SizedBox.shrink(),
+    ),
     home: preview
         ? _PreviewGate(useCases: useCases, showAuth: showAuthPreview)
         : _AuthGate(useCases: useCases),

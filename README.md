@@ -6,6 +6,8 @@
 
 Trang chủ và lịch được chỉnh theo ảnh mẫu mới: nền kem/vàng nhạt, thẻ mục tiêu navy với vòng tiến độ vàng, các thẻ Quiz/Tài liệu, biểu đồ tuần và lịch ngày/tuần/tháng.
 
+Các trang dùng chung nền kem chuyển xanh nhạt của Thống kê, gồm cả các trang con, tài khoản, đăng nhập và công cụ AI. Mục **Thống kê học tập** có thẻ trắng cùng kiểu với các mục bên dưới. Nút **Kiểm tra đáp án / Câu tiếp theo / Nộp bài** trong Quiz được căn giữa, rộng bằng vùng câu hỏi.
+
 Footer chung có thứ tự **Lịch → Quiz → Trang chủ → Thống kê → Tài liệu**; biểu tượng ngôi nhà nằm giữa và mở Trang chủ. AI mở bằng nút tròn vàng hình lấp lánh bên phải, tách khỏi footer. Footer giữ nguyên khi mở quiz, hội thoại hay tài liệu trong từng tab. Chạm lại biểu tượng tab sẽ trở về trang đầu của tab đó. Nút Back Android đóng trang con trước; từ AI trở về tab đã mở trước đó.
 
 ## Đăng nhập và đăng ký theo thiết kế mới

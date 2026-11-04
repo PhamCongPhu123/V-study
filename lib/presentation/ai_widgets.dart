@@ -20,14 +20,7 @@ class AiFrame extends StatelessWidget {
   final bool busy;
   @override
   Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFF0D8AA), Color(0xFFF8F6ED), Color(0xFFCFDAF1)],
-        stops: [0, .38, 1],
-      ),
-    ),
+    decoration: const BoxDecoration(gradient: VstudyColors.background),
     child: Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
