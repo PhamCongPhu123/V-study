@@ -8,6 +8,16 @@ Trang chủ và lịch được chỉnh theo ảnh mẫu mới: nền kem/vàng 
 
 Footer chung có thứ tự **Lịch → Quiz → Trang chủ → Thống kê → Tài liệu**; biểu tượng ngôi nhà nằm giữa và mở Trang chủ. AI mở bằng nút tròn vàng hình lấp lánh bên phải, tách khỏi footer. Footer giữ nguyên khi mở quiz, hội thoại hay tài liệu trong từng tab. Chạm lại biểu tượng tab sẽ trở về trang đầu của tab đó. Nút Back Android đóng trang con trước; từ AI trở về tab đã mở trước đó.
 
+## Tài khoản từ ảnh đại diện
+
+Chạm avatar ở góc trên bên phải Trang chủ để mở **Thông tin tài khoản**: avatar/tên/email, lớp/ngành, số giờ học và kết quả quiz trong 30 ngày, môn học, lối tắt chức năng và cài đặt. Số liệu lấy từ lịch sử học đã ghi nhận; chưa có quiz thì điểm hiển thị dấu gạch.
+
+**Chỉnh sửa thông tin** cho phép đổi tên, lớp, ngành, ngày sinh, chọn một trong bốn avatar có sẵn và sửa mục tiêu học mỗi ngày. Email chỉ đọc từ Supabase Auth; sửa hồ sơ không đổi email đăng nhập. Sau khi lưu thành công xuất hiện hộp xác nhận dấu tích xanh; thông tin ở Trang chủ được tải lại khi quay về. Rời form chưa lưu cần xác nhận; lỗi lưu giữ nguyên nội dung để thử lại.
+
+**Cài đặt** lưu lựa chọn chế độ tối cho các trang tài khoản và lựa chọn nhắc học. Nhắc học chưa phát thông báo thiết bị. Ngôn ngữ hiện là tiếng Việt. **Đăng xuất** cần xác nhận; tài khoản thật đóng phiên Auth và bỏ các trang dữ liệu cá nhân. Bản mẫu thoát sang màn hình có nút **Tiếp tục xem giao diện**, không yêu cầu đăng nhập. Avatar hiện là biểu tượng có sẵn, chưa hỗ trợ tải ảnh cá nhân lên.
+
+Bản mẫu không cần SQL. Với backend thật, áp dụng thêm `supabase/migrations/202611040001_account_profile.sql` sau ba migration trước; không cần deploy Edge Function. Xem [nâng cấp và kiểm chứng tài khoản](docs/account-profile-upgrade.md).
+
 ## Thêm lịch trình theo các frame mới
 
 Trong tab **Lịch**, chọn **+ Thêm** để mở form toàn trang có nền kem chuyển xanh. Nhập tên lịch, chọn **Môn học / Deadline**, **Trên lớp / Tự học**, ngày, giờ bắt đầu/kết thúc, địa điểm, ghi chú, lặp hằng tuần và thời gian nhắc. Mục mở rộng cho phép liên kết môn học và thêm checklist. Có thể chọn ngày kết thúc riêng cho lịch qua nửa đêm.

@@ -6,7 +6,7 @@ import '../domain/entities.dart';
 import '../domain/use_cases.dart';
 import 'design_system.dart';
 import 'schedule_confirmation.dart';
-import 'schedule_exit_scope.dart';
+import 'draft_exit_scope.dart';
 import 'widgets.dart';
 
 /// A route inside the calendar tab. The shell keeps its footer and AI shortcut.
@@ -52,7 +52,7 @@ class _ScheduleEditorPageState extends State<ScheduleEditorPage> {
   String? _error;
   late final String _initialSnapshot;
   VoidCallback? _unregisterExit;
-  ScheduleExitScope? _exitScope;
+  DraftExitScope? _exitScope;
 
   bool get _editing => widget.existing != null;
   bool get _locked => _busy || _dialogPending || _exiting;
@@ -86,7 +86,7 @@ class _ScheduleEditorPageState extends State<ScheduleEditorPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final scope = ScheduleExitScope.maybeOf(context);
+    final scope = DraftExitScope.maybeOf(context);
     if (_exitScope != scope) {
       _unregisterExit?.call();
       _exitScope = scope;

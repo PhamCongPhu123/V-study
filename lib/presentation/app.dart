@@ -18,9 +18,66 @@ class VstudyApp extends StatelessWidget {
     debugShowCheckedModeBanner: false,
     theme: vstudyTheme(),
     home: preview
-        ? VstudyShell(useCases: useCases, preview: true)
+        ? _PreviewGate(useCases: useCases)
         : _AuthGate(useCases: useCases),
   );
+}
+
+class _PreviewGate extends StatefulWidget {
+  const _PreviewGate({required this.useCases});
+  final VstudyUseCases useCases;
+  @override
+  State<_PreviewGate> createState() => _PreviewGateState();
+}
+
+class _PreviewGateState extends State<_PreviewGate> {
+  bool _ended = false;
+  @override
+  Widget build(BuildContext context) => _ended
+      ? Scaffold(
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.waving_hand_outlined,
+                      size: 56,
+                      color: VstudyColors.gold,
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Đã thoát bản xem thử',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Bạn có thể tiếp tục xem giao diện mà không cần đăng nhập.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      key: const ValueKey('account-preview-continue'),
+                      onPressed: () => setState(() => _ended = false),
+                      child: const Text('Tiếp tục xem giao diện'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        )
+      : VstudyShell(
+          useCases: widget.useCases,
+          preview: true,
+          onPreviewSignOut: () => setState(() => _ended = true),
+        );
 }
 
 class _AuthGate extends StatefulWidget {

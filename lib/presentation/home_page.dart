@@ -5,19 +5,30 @@ import 'package:flutter/material.dart';
 import '../domain/entities.dart';
 import '../domain/use_cases.dart';
 import 'design_system.dart';
+import 'account_page.dart';
+import 'account_widgets.dart';
 import 'quiz_ai_launcher.dart';
 import 'widgets.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.useCases, required this.onNavigate});
+  const HomePage({
+    super.key,
+    required this.useCases,
+    required this.onNavigate,
+    this.preview = false,
+    this.onPreviewSignOut,
+  });
   final VstudyUseCases useCases;
   final ValueChanged<int> onNavigate;
+  final bool preview;
+  final VoidCallback? onPreviewSignOut;
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
   late Future<HomeDashboard> _future;
+  bool _openingAccount = false;
   @override
   void initState() {
     super.initState();
@@ -48,12 +59,26 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _editProfile(Profile profile) async {
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (_) => _GoalDialog(useCases: widget.useCases, profile: profile),
-    );
-    if (mounted && saved == true) {
+  Future<void> _openAccount() async {
+    if (_openingAccount) {
+      return;
+    }
+    _openingAccount = true;
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => AccountPage(
+            useCases: widget.useCases,
+            onNavigate: widget.onNavigate,
+            preview: widget.preview,
+            onPreviewSignOut: widget.onPreviewSignOut,
+          ),
+        ),
+      );
+    } finally {
+      _openingAccount = false;
+    }
+    if (mounted) {
       _refresh();
     }
   }
@@ -185,27 +210,12 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(width: 12),
         Tooltip(
-          message: 'Hồ sơ và mục tiêu',
+          message: 'Thông tin tài khoản',
           child: InkWell(
-            onTap: () => _editProfile(profile),
+            key: const ValueKey('home-account'),
+            onTap: _openAccount,
             borderRadius: BorderRadius.circular(24),
-            child: Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFF1E3C4),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: .8),
-                  width: 2,
-                ),
-              ),
-              child: const Icon(
-                Icons.face_rounded,
-                color: VstudyColors.navy,
-                size: 31,
-              ),
-            ),
+            child: AccountAvatar(avatarKey: profile.avatarKey, size: 46),
           ),
         ),
       ],
@@ -885,98 +895,6 @@ class _SessionDialogState extends State<_SessionDialog> {
               onPressed: _busy ? null : _pickStart,
               child: Text(
                 'Bắt đầu: ${shortDate(_startedAt)} ${shortTime(_startedAt)}',
-              ),
-            ),
-            if (_error != null) Text(_error!),
-          ],
-        ),
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: _busy ? null : () => Navigator.pop(context),
-        child: const Text('Hủy'),
-      ),
-      FilledButton(
-        onPressed: _busy ? null : _save,
-        child: Text(_busy ? 'Đang lưu…' : 'Lưu'),
-      ),
-    ],
-  );
-}
-
-class _GoalDialog extends StatefulWidget {
-  const _GoalDialog({required this.useCases, required this.profile});
-  final VstudyUseCases useCases;
-  final Profile profile;
-  @override
-  State<_GoalDialog> createState() => _GoalDialogState();
-}
-
-class _GoalDialogState extends State<_GoalDialog> {
-  late final TextEditingController _name;
-  late final TextEditingController _goal;
-  bool _busy = false;
-  String? _error;
-  @override
-  void initState() {
-    super.initState();
-    _name = TextEditingController(text: widget.profile.displayName);
-    _goal = TextEditingController(text: '${widget.profile.dailyGoalMinutes}');
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _goal.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await widget.useCases.updateProfile(
-        displayName: _name.text,
-        dailyGoalMinutes: int.tryParse(_goal.text) ?? 0,
-      );
-      if (mounted) {
-        Navigator.pop(context, true);
-      }
-    } catch (error) {
-      if (mounted) {
-        setState(() => _error = errorMessage(error));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Hồ sơ và mục tiêu'),
-    content: SizedBox(
-      width: 420,
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _name,
-              enabled: !_busy,
-              decoration: const InputDecoration(labelText: 'Họ và tên'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _goal,
-              enabled: !_busy,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Mục tiêu mỗi ngày (phút)',
               ),
             ),
             if (_error != null) Text(_error!),

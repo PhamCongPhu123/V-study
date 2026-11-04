@@ -18,6 +18,8 @@ flowchart LR
 
 `domain` không import Flutter, Supabase hoặc SDK Google. Use case kiểm tra đầu vào; adapter chuyển đổi JSON và lỗi hạ tầng; `main.dart` inject implementation vào domain. UI có thể đọc qua repository interface, thao tác nghiệp vụ đi qua use case. Validation client giúp phản hồi sớm nhưng không được xem là ranh giới bảo mật: database/Edge Functions kiểm tra độc lập.
 
+`AccountRepository` quản lý các trường hồ sơ và lựa chọn tài khoản trong `profiles`; email và phiên vẫn thuộc `AuthRepository`. Lưu chi tiết và lưu công tắc cài đặt dùng các tập cột riêng để không ghi đè lẫn nhau. Tất cả cập nhật được lọc theo người dùng hiện tại và kiểm tra bản ghi bị tác động; các trường mở rộng tiếp tục chịu RLS/quyền cập nhật cột của bảng hồ sơ.
+
 ## Dữ liệu và ownership
 
 `auth.users` → `profiles`, môn học, lịch, phiên học, tài liệu, quiz, lượt làm bài và hội thoại. Profile được tạo bởi trigger sau signup, bao gồm tài khoản đã tồn tại trước migration. Các bảng người dùng đều có RLS và quyền cụ thể; khóa ngoại tổng hợp `(id, owner_id)` chặn gắn bản ghi của người khác ngay cả khi biết UUID.

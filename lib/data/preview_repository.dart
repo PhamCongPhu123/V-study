@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import '../core/app_exception.dart';
 import '../domain/analytics.dart';
 import '../domain/analytics_repository.dart';
+import '../domain/account_repository.dart';
 import '../domain/entities.dart';
 import '../domain/repositories.dart';
 import '../domain/study_metrics.dart';
@@ -15,7 +16,8 @@ class PreviewRepository
         DocumentRepository,
         QuizRepository,
         AssistantRepository,
-        AnalyticsRepository {
+        AnalyticsRepository,
+        AccountRepository {
   PreviewRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     final today = localDay(_now);
     _events.addAll([
@@ -164,7 +166,13 @@ class PreviewRepository
   }
 
   String _id() => 'preview-${++_sequence}';
-  Profile _profile = const Profile(id: 'preview-user', displayName: 'Tom');
+  Profile _profile = Profile(
+    id: 'preview-user',
+    displayName: 'Tom',
+    className: 'D22CNTT1',
+    major: 'Công nghệ thông tin',
+    birthDate: DateTime(2004, 6, 15),
+  );
   final _subjects = <Subject>[
     const Subject(
       id: 'philosophy',
@@ -205,6 +213,7 @@ class PreviewRepository
     quizzes: this,
     assistant: this,
     analytics: this,
+    account: this,
   );
 
   // Seed once, rather than on refresh, so edits and newly logged activity remain
@@ -446,11 +455,28 @@ class PreviewRepository
     required String displayName,
     required int dailyGoalMinutes,
   }) async {
-    _profile = Profile(
-      id: _profile.id,
+    _profile = _profile.copyWith(
       displayName: displayName,
       dailyGoalMinutes: dailyGoalMinutes,
     );
+  }
+
+  @override
+  Future<void> saveAccount(AccountDraft draft) async {
+    _profile = _profile.copyWith(
+      displayName: draft.displayName,
+      dailyGoalMinutes: draft.dailyGoalMinutes,
+      className: draft.className,
+      major: draft.major,
+      birthDate: draft.birthDate,
+      clearBirthDate: draft.birthDate == null,
+      avatarKey: draft.avatarKey,
+    );
+  }
+
+  @override
+  Future<void> saveAccountPreferences(AccountPreferences preferences) async {
+    _profile = _profile.copyWith(preferences: preferences);
   }
 
   @override

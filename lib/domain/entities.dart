@@ -19,11 +19,71 @@ class Profile {
     required this.displayName,
     this.dailyGoalMinutes = 180,
     this.timezone = 'Asia/Ho_Chi_Minh',
+    this.className = '',
+    this.major = '',
+    this.birthDate,
+    this.avatarKey = 'student',
+    this.preferences = const AccountPreferences(),
   });
   final String id;
   final String displayName;
   final int dailyGoalMinutes;
   final String timezone;
+  final String className;
+  final String major;
+  final DateTime? birthDate;
+  final String avatarKey;
+  final AccountPreferences preferences;
+
+  Profile copyWith({
+    String? displayName,
+    int? dailyGoalMinutes,
+    String? className,
+    String? major,
+    DateTime? birthDate,
+    bool clearBirthDate = false,
+    String? avatarKey,
+    AccountPreferences? preferences,
+  }) => Profile(
+    id: id,
+    displayName: displayName ?? this.displayName,
+    dailyGoalMinutes: dailyGoalMinutes ?? this.dailyGoalMinutes,
+    timezone: timezone,
+    className: className ?? this.className,
+    major: major ?? this.major,
+    birthDate: clearBirthDate ? null : birthDate ?? this.birthDate,
+    avatarKey: avatarKey ?? this.avatarKey,
+    preferences: preferences ?? this.preferences,
+  );
+}
+
+const accountAvatarKeys = ['student', 'book', 'rocket', 'flower'];
+
+class AccountPreferences {
+  const AccountPreferences({
+    this.darkProfile = false,
+    this.studyReminders = true,
+  });
+  final bool darkProfile;
+  final bool studyReminders;
+}
+
+/// Email belongs to Auth and is never overwritten by a profile edit.
+class AccountDraft {
+  const AccountDraft({
+    required this.displayName,
+    required this.dailyGoalMinutes,
+    this.className = '',
+    this.major = '',
+    this.birthDate,
+    this.avatarKey = 'student',
+  });
+  final String displayName;
+  final int dailyGoalMinutes;
+  final String className;
+  final String major;
+  final DateTime? birthDate;
+  final String avatarKey;
 }
 
 class Subject {

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import '../core/app_exception.dart';
 import 'analytics.dart';
 import 'analytics_repository.dart';
+import 'account_repository.dart';
 import 'entities.dart';
 import 'repositories.dart';
 
@@ -14,6 +15,7 @@ class VstudyUseCases {
     required this.quizzes,
     required this.assistant,
     this.analytics,
+    this.account,
   });
   final AuthRepository auth;
   final StudyRepository study;
@@ -21,6 +23,61 @@ class VstudyUseCases {
   final QuizRepository quizzes;
   final AssistantRepository assistant;
   final AnalyticsRepository? analytics;
+  final AccountRepository? account;
+
+  AccountRepository get _account =>
+      account ??
+      (throw const AppException('Thông tin tài khoản chưa được cấu hình.'));
+
+  Future<void> saveAccount(AccountDraft draft, {DateTime? now}) {
+    final name = _text(draft.displayName, 'Họ và tên', 100);
+    final className = draft.className.trim();
+    final major = draft.major.trim();
+    if (className.length > 80 || major.length > 120) {
+      throw const AppException(
+        'Tên lớp tối đa 80 ký tự, ngành học tối đa 120 ký tự.',
+      );
+    }
+    if (draft.dailyGoalMinutes < 1 || draft.dailyGoalMinutes > 1440) {
+      throw const AppException('Mục tiêu cần từ 1 đến 1440 phút/ngày.');
+    }
+    if (!accountAvatarKeys.contains(draft.avatarKey)) {
+      throw const AppException('Vui lòng chọn một ảnh đại diện có sẵn.');
+    }
+    final birth = draft.birthDate;
+    final clock = (now ?? DateTime.now()).toLocal();
+    if (birth != null &&
+        (birth.year < 1900 ||
+            DateTime(
+              birth.year,
+              birth.month,
+              birth.day,
+            ).isAfter(DateTime(clock.year, clock.month, clock.day)) ||
+            birth.hour != 0 ||
+            birth.minute != 0 ||
+            birth.second != 0 ||
+            birth.millisecond != 0 ||
+            birth.microsecond != 0)) {
+      throw const AppException(
+        'Ngày sinh cần từ năm 1900 đến hôm nay và không gồm giờ.',
+      );
+    }
+    return _account.saveAccount(
+      AccountDraft(
+        displayName: name,
+        dailyGoalMinutes: draft.dailyGoalMinutes,
+        className: className,
+        major: major,
+        birthDate: birth == null
+            ? null
+            : DateTime(birth.year, birth.month, birth.day),
+        avatarKey: draft.avatarKey,
+      ),
+    );
+  }
+
+  Future<void> saveAccountPreferences(AccountPreferences preferences) =>
+      _account.saveAccountPreferences(preferences);
 
   AnalyticsRepository get _analytics {
     final repository = analytics;

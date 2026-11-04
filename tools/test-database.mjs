@@ -31,7 +31,7 @@ try {
   });
   const migrations = (await readdir(join(root, 'supabase/migrations'))).filter(p => p.endsWith('.sql')).sort();
   if (migrations.length === 0) throw new Error('No migrations found');
-  const files = ['supabase/tests/bootstrap.sql', ...migrations.map(p => `supabase/migrations/${p}`), 'supabase/tests/security.sql', 'supabase/tests/quiz_security.sql', 'supabase/tests/statistics_security.sql'];
+  const files = ['supabase/tests/bootstrap.sql', ...migrations.map(p => `supabase/migrations/${p}`), 'supabase/tests/security.sql', 'supabase/tests/quiz_security.sql', 'supabase/tests/statistics_security.sql', 'supabase/tests/account_security.sql'];
   for (const path of files) {
     await client.query(await readFile(resolve(root, path), 'utf8'));
     console.log(`Completed ${path}`);

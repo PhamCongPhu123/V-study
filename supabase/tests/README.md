@@ -11,6 +11,8 @@ psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
 
 Never run fixtures against a production project. The fixed UUIDs are intentionally test-only. SQL notice lines begin with `PASS:`; any exception or nonzero runner exit is a failure.
 
+`account_security.sql` adds 20 checks for account profile fields and preferences, including ownership, anonymous access, immutable identity/timestamp, valid dates/avatar presets and preservation of existing details. `npm test --prefix tools` applies all migrations and runs this suite together with the core, quiz and statistics suites in a disposable cluster (192 assertions in total).
+
 ## PostgreSQL-only validation
 
 `bootstrap.sql` defines minimal auth/storage schemas for an otherwise empty disposable PostgreSQL 15+ database. It mirrors Supabase broad default table grants, including privileges such as TRUNCATE that RLS does not protect. **Do not execute bootstrap against Supabase**; it is only a local test double.

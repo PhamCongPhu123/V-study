@@ -8,14 +8,20 @@ import 'home_page.dart';
 import 'quiz_page.dart';
 import 'quiz_ai_launcher.dart';
 import 'statistics_page.dart';
-import 'schedule_exit_scope.dart';
+import 'draft_exit_scope.dart';
 import 'widgets.dart';
 
 /// A navigator per tab keeps the footer visible even on pushed feature screens.
 class VstudyShell extends StatefulWidget {
-  const VstudyShell({super.key, required this.useCases, this.preview = false});
+  const VstudyShell({
+    super.key,
+    required this.useCases,
+    this.preview = false,
+    this.onPreviewSignOut,
+  });
   final VstudyUseCases useCases;
   final bool preview;
+  final VoidCallback? onPreviewSignOut;
   @override
   State<VstudyShell> createState() => _VstudyShellState();
 }
@@ -28,21 +34,21 @@ class _VstudyShellState extends State<VstudyShell> {
   int _index = 2;
   int _footerIndex = 2;
   String? _aiPrompt;
-  ScheduleLeaveHandler? _scheduleLeave;
+  DraftLeaveHandler? _draftLeave;
   bool _switchingTab = false;
 
   Future<void> _select(int index) async {
     if (_switchingTab) {
       return;
     }
-    final leave = _scheduleLeave;
+    final leave = _draftLeave;
     if (leave != null) {
       _switchingTab = true;
       try {
         if (!await leave() || !mounted) {
           return;
         }
-        _scheduleLeave = null;
+        _draftLeave = null;
       } catch (error) {
         if (mounted) {
           showError(context, error);
@@ -94,7 +100,12 @@ class _VstudyShellState extends State<VstudyShell> {
   Widget _page(int index) => switch (index) {
     0 => CalendarPage(useCases: widget.useCases),
     1 => QuizPage(useCases: widget.useCases),
-    2 => HomePage(useCases: widget.useCases, onNavigate: _select),
+    2 => HomePage(
+      useCases: widget.useCases,
+      onNavigate: _select,
+      preview: widget.preview,
+      onPreviewSignOut: widget.onPreviewSignOut,
+    ),
     3 => StatisticsPage(useCases: widget.useCases),
     4 => DocumentsPage(useCases: widget.useCases),
     _ => _FeatureFrame(
@@ -137,12 +148,12 @@ class _VstudyShellState extends State<VstudyShell> {
   }
 
   @override
-  Widget build(BuildContext context) => ScheduleExitScope(
+  Widget build(BuildContext context) => DraftExitScope(
     attach: (handler) {
-      _scheduleLeave = handler;
+      _draftLeave = handler;
       return () {
-        if (_scheduleLeave == handler) {
-          _scheduleLeave = null;
+        if (_draftLeave == handler) {
+          _draftLeave = null;
         }
       };
     },

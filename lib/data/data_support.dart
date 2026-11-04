@@ -103,6 +103,16 @@ Profile profileFromJson(Map<String, dynamic> row) => Profile(
   displayName: row['display_name'] as String,
   dailyGoalMinutes: row['daily_goal_minutes'] as int,
   timezone: row['timezone'] as String,
+  className: row['class_name'] as String? ?? '',
+  major: row['major'] as String? ?? '',
+  birthDate: row['birth_date'] == null
+      ? null
+      : DateTime.parse(row['birth_date'] as String),
+  avatarKey: row['avatar_key'] as String? ?? 'student',
+  preferences: AccountPreferences(
+    darkProfile: row['dark_profile'] as bool? ?? false,
+    studyReminders: row['study_reminders'] as bool? ?? true,
+  ),
 );
 
 Subject subjectFromJson(Map<String, dynamic> row) => Subject(
