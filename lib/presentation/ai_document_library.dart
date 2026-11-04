@@ -325,7 +325,7 @@ class _AiDocumentLibraryPageState extends State<AiDocumentLibraryPage> {
                     const Padding(
                       padding: EdgeInsets.only(top: 4),
                       child: Text(
-                        'Tài liệu đã chọn sẽ được gửi đến Gemini khi tạo nội dung.',
+                        'Tài liệu đã chọn sẽ được gửi đến Vstudy Ai khi tạo nội dung.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 10,

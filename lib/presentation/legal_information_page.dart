@@ -33,8 +33,8 @@ class LegalInformationPage extends StatelessWidget {
                         ? const [
                             'Thông tin tài khoản\nEmail và mật khẩu được xử lý bởi dịch vụ xác thực Supabase. Ứng dụng không lưu mật khẩu trong hồ sơ học tập.',
                             'Dữ liệu học tập\nTên, lớp, ngành, ngày sinh nếu bạn cung cấp, lịch học, tài liệu, kết quả quiz và hội thoại được lưu theo tài khoản của bạn khi sử dụng dịch vụ thật.',
-                            'Sử dụng AI\nKhi bạn chọn tài liệu và gửi câu hỏi hoặc tạo nội dung, phần nội dung đã chọn được chuyển đến Gemini để xử lý. Hãy chỉ dùng tài liệu bạn có quyền sử dụng.',
-                            'Bản xem thử\nDữ liệu trong bản mẫu là minh họa và chỉ giữ trong phiên chạy. Bản mẫu không đăng ký tài khoản, không gửi email và không gọi Gemini.',
+                            'Sử dụng AI\nKhi bạn chọn tài liệu và gửi câu hỏi hoặc tạo nội dung, phần nội dung đã chọn được chuyển đến Vstudy Ai để xử lý. Hãy chỉ dùng tài liệu bạn có quyền sử dụng.',
+                            'Bản xem thử\nDữ liệu trong bản mẫu là minh họa và chỉ giữ trong phiên chạy. Bản mẫu không đăng ký tài khoản, không gửi email và không gọi Vstudy Ai.',
                             'Quản lý tài khoản\nBạn có thể sửa hồ sơ, xóa các tài liệu/hội thoại có chức năng xóa và đăng xuất. Đăng xuất không xóa dữ liệu đã lưu trên máy chủ.',
                           ]
                         : const [

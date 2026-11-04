@@ -295,7 +295,7 @@ class _AiQuizBuilderPageState extends State<AiQuizBuilderPage> {
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
-                      'Các tài liệu đã chọn sẽ được gửi đến Gemini.',
+                      'Các tài liệu đã chọn sẽ được gửi đến Vstudy Ai.',
                       style: TextStyle(fontSize: 10, color: VstudyColors.muted),
                     ),
                   ),

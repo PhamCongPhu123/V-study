@@ -333,7 +333,7 @@ class PreviewRepository
                   ],
             correctOption: kind == ExerciseKind.essay ? null : 0,
             explanation:
-                'Đây là lời giải minh họa trong bản mẫu, không phân tích tài liệu và không gọi Gemini.',
+                'Đây là lời giải minh họa trong bản mẫu, không phân tích tài liệu và không gọi Vstudy Ai.',
             sampleAnswer: kind == ExerciseKind.essay
                 ? 'Nêu định nghĩa bằng lời của bạn, giải thích ý nghĩa và đưa một ví dụ cụ thể.'
                 : '',
@@ -1544,7 +1544,7 @@ class PreviewRepository
       threadId: id,
       role: 'assistant',
       content:
-          'Bản mẫu UX/UI — không gọi Gemini và không phân tích tài liệu.\n\n$response',
+          'Bản mẫu UX/UI — không gọi Vstudy Ai và không phân tích tài liệu.\n\n$response',
       createdAt: now.add(const Duration(microseconds: 1)),
     );
     (_messages[id] ??= []).addAll([user, assistant]);

@@ -126,7 +126,7 @@ class AiPreviewNote extends StatelessWidget {
   Widget build(BuildContext context) => const Padding(
     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
     child: Text(
-      'Bản mẫu minh họa · Chưa gọi Gemini hoặc phân tích tài liệu.',
+      'Bản mẫu minh họa · Chưa gọi Vstudy Ai hoặc phân tích tài liệu.',
       style: TextStyle(fontSize: 10, color: VstudyColors.muted),
       textAlign: TextAlign.center,
     ),
