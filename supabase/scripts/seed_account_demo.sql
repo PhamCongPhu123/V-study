@@ -76,7 +76,7 @@ begin
   values(v_owner,900,5,20,v_today-30,v_today+120) on conflict(owner_id) do nothing;
   insert into public.quiz_chapters(id,owner_id,subject_id,title,position)
   values(v_chapter,v_owner,v_math,'[MẪU] Kiến thức cơ bản',0) on conflict(id) do nothing;
-  if not exists(select 1 from public.quizzes where owner_id=v_owner and chapter_id=v_chapter and title='[MẪU] Quiz khởi động') then
+  if not exists(select 1 from public.quizzes where owner_id=v_owner and chapter_id=v_chapter) then
     perform public.create_generated_quiz(v_owner,'[MẪU] Quiz khởi động','Toán học cơ bản',null,
       '[
         {"question":"2 + 3 bằng bao nhiêu?","options":["5","4","6","3"],"correct_option":0,"explanation":"Cộng 2 với 3 được 5."},
