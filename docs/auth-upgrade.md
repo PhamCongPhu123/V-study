@@ -37,7 +37,7 @@ Lấy key trong Supabase Dashboard → **Settings → API Keys**, không dùng I
 
 Trong Supabase Dashboard:
 
-1. Vào **Authentication → Sign In / Providers → Email** (một số giao diện đặt là Providers). Bật Email provider, cho phép đăng ký và bật **Confirm email**. Đặt độ dài mật khẩu tối thiểu 8 ký tự, phù hợp validation hiện tại.
+1. Vào **Authentication → Sign In / Providers → Email** (một số giao diện đặt là Providers). Bật Email provider, cho phép đăng ký và tắt **Confirm email** để đăng ký không cần xác nhận email. Đặt độ dài mật khẩu tối thiểu 8 ký tự, phù hợp validation hiện tại.
 2. Vào **Authentication → URL Configuration → Redirect URLs**, thêm chính xác `io.vstudy.app://login-callback/`. Site URL là địa chỉ web mặc định khi không có redirect; không thay thế danh sách Redirect URLs.
 3. Cấu hình SMTP trong mục Email/SMTP nếu cần gửi đến người dùng thật. Dịch vụ gửi email mặc định của Supabase có hạn mức và giới hạn địa chỉ nhận; đăng ký không gửi được có thể do cấu hình này. Kiểm tra Auth Logs và SMTP khi gặp lỗi gửi.
 4. Nếu đã tùy chỉnh email template, giữ đường dẫn xác thực theo `{{ .ConfirmationURL }}` cho luồng PKCE này. Template tự chế chỉ gửi token hoặc chỉ chuyển thẳng tới app sẽ cần luồng xử lý khác.
@@ -87,7 +87,7 @@ Android đã có Internet permission và intent filter `io.vstudy.app` / `login-
 ## Hành vi của các luồng
 
 - **Đăng nhập:** kiểm tra email và mật khẩu, giữ nguyên khoảng trắng trong mật khẩu. Form khóa khi đang gửi. Chỉ Auth event có phiên hợp lệ mới mở ứng dụng; lỗi giữ nội dung và hiển thị thông báo tiếng Việt.
-- **Đăng ký:** yêu cầu tên, email, mật khẩu 8–128 ký tự, nhập lại khớp và đồng ý điều khoản. Tên được gửi trong `display_name` để trigger tạo hồ sơ. Khi bật Confirm email, mở màn hình **Kiểm tra email của bạn**; không mở Trang chủ chỉ vì Supabase trả user ID. Nếu quản trị viên tắt Confirm email và server cấp phiên ngay, Auth gate nhận phiên và mở Trang chủ.
+- **Đăng ký:** yêu cầu tên, email, mật khẩu 8–128 ký tự, nhập lại khớp và đồng ý điều khoản. Tên được gửi trong `display_name` để trigger tạo hồ sơ. Khi bật Confirm email, mở màn hình **Kiểm tra email của bạn**; không mở Trang chủ chỉ vì Supabase trả user ID. Khi tắt Confirm email, app đóng phiên tạm do Supabase cấp lúc đăng ký, báo tạo tài khoản thành công và quay về form Đăng nhập với email đã điền. Người dùng đăng nhập bằng mật khẩu để vào Trang chủ.
 - **Gửi lại xác nhận:** từ màn hình kiểm tra email hoặc lỗi email chưa xác nhận; sau khi gửi có đếm ngược 60 giây. Server tiếp tục áp dụng hạn mức riêng. Thông báo gửi không khẳng định địa chỉ có tài khoản hoặc thư đã được nhận.
 - **Quên mật khẩu:** dùng email đang nhập, gửi liên kết PKCE và phản hồi chung. Mở liên kết hợp lệ vào màn hình đặt mật khẩu mới; đổi thành công có xác nhận trước khi tiếp tục học. Hủy luồng đóng phiên recovery và quay về đăng nhập. Lưu lỗi giữ form để sửa/thử lại.
 - **Phiên và callback:** nhận liên kết lúc app đang mở hoặc được khởi động từ email/Google. Chỉ URI đã cấu hình được xử lý; cùng callback ban đầu/foreground chỉ đổi mã một lần. Liên kết lỗi/hết hạn cho thông báo an toàn, không đưa mã xác thực hoặc chi tiết provider lên giao diện. Khi đổi tài khoản/đăng xuất, các route dữ liệu tài khoản trước bị đóng.
@@ -128,3 +128,7 @@ flutter test
 Kiểm tra thủ công bằng tài khoản thử: đăng ký → mở email trên cùng thiết bị → xác nhận → đăng nhập → đăng xuất → quên mật khẩu → mở email khi app đã đóng → lưu mật khẩu mới → đăng nhập lại. Thử mật khẩu sai, email chưa xác nhận, gửi lặp, mất mạng và liên kết hết hạn. Kiểm tra Google sau khi bật provider; kiểm tra form trên màn hình nhỏ khi bàn phím mở.
 
 Nội dung Điều khoản/Chính sách bảo mật trong app là thông tin cho bản học tập; cần bổ sung thông tin nhà phát hành/kênh hỗ trợ trước khi phát hành. Checkbox hiện kiểm tra luồng đăng ký phía client, chưa là nhật ký đồng ý điều khoản có phiên bản trên server.
+
+## Đăng ký không cần xác nhận email
+
+Trong Supabase Dashboard → Authentication → Sign In / Providers → Email, tắt **Confirm email** và lưu. `supabase/config.toml` đã tắt xác nhận cho môi trường local; sửa file này không tự thay đổi cấu hình dự án hosted. Không cần chạy SQL hoặc deploy Edge Functions cho thay đổi này. Tài khoản cũ chưa xác nhận cần được quản trị viên xác nhận trong Authentication → Users, hoặc dùng tài khoản mới để kiểm tra. Quên mật khẩu vẫn cần email/SMTP để gửi liên kết khôi phục.

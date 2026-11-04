@@ -216,6 +216,18 @@ class _AuthPageState extends State<AuthPage> {
           });
         } else {
           TextInput.finishAutofillContext(shouldSave: true);
+          _password.clear();
+          _confirm.clear();
+          setState(() {
+            _step = _AuthStep.signIn;
+            _form = GlobalKey<FormState>();
+            _accepted = false;
+            _visible = false;
+            _confirmVisible = false;
+            _successNotice = true;
+            _notice =
+                'Tạo tài khoản thành công. Hãy đăng nhập để bắt đầu học tập.';
+          });
         }
       } else {
         await widget.useCases.signIn(_email.text, _password.text);

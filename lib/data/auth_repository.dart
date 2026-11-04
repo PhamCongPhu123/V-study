@@ -23,10 +23,11 @@ class SupabaseAuthRepository implements AuthRepository, AuthFlowRepository {
   late final StreamSubscription<AuthState> _subscription;
   bool _recovery = false;
   bool _disposed = false;
+  bool _registering = false;
   String? _pendingNotice;
 
   void _onAuthState(AuthState state) {
-    if (_disposed) {
+    if (_disposed || _registering) {
       return;
     }
     if (state.event == AuthChangeEvent.passwordRecovery) {
@@ -138,13 +139,40 @@ class SupabaseAuthRepository implements AuthRepository, AuthFlowRepository {
   @override
   Future<SignUpResult> signUp(String name, String email, String password) =>
       _call(() async {
-        final result = await client.auth.signUp(
-          email: email,
-          password: password,
-          data: {'display_name': name},
-          emailRedirectTo: redirectUrl,
-        );
-        return SignUpResult(needsEmailConfirmation: result.session == null);
+        if (_registering || client.auth.currentSession != null) {
+          throw const AppException(
+            'Vui lòng đăng xuất trước khi tạo tài khoản mới.',
+          );
+        }
+        // With Confirm email disabled, Supabase issues a session at signup.
+        // Keep that temporary session out of the Auth gate: the user signs in
+        // explicitly after the successful registration screen.
+        _registering = true;
+        try {
+          final result = await client.auth.signUp(
+            email: email,
+            password: password,
+            data: {'display_name': name},
+            emailRedirectTo: redirectUrl,
+          );
+          final needsConfirmation = result.session == null;
+          if (!needsConfirmation) {
+            try {
+              await client.auth.signOut(scope: SignOutScope.local);
+            } catch (_) {
+              // The SDK clears the local session before remote revocation.
+              if (client.auth.currentSession != null) {
+                rethrow;
+              }
+            }
+          }
+          return SignUpResult(needsEmailConfirmation: needsConfirmation);
+        } finally {
+          _registering = false;
+          if (!_disposed) {
+            _users.add(currentUser);
+          }
+        }
       });
   @override
   Future<void> signOut() => _call(() async {

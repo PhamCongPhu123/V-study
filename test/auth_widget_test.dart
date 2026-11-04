@@ -19,6 +19,7 @@ class _Auth implements AuthRepository, AuthFlowRepository {
   AppUser? user;
   int signIns = 0;
   int signUps = 0;
+  bool confirmSignup = true;
   int googleOpens = 0;
   int resends = 0;
   String? resetEmail;
@@ -98,7 +99,7 @@ class _Auth implements AuthRepository, AuthFlowRepository {
   ) async {
     signUps++;
     registration = [name, email, password];
-    return const SignUpResult(needsEmailConfirmation: true);
+    return SignUpResult(needsEmailConfirmation: confirmSignup);
   }
 
   @override
@@ -201,6 +202,28 @@ void main() {
       );
       expect(find.byType(VstudyFooter), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+  testWidgets(
+    'signup without confirmation returns to login with email retained',
+    (tester) async {
+      auth.confirmSignup = false;
+      await tester.pumpWidget(VstudyApp(useCases: useCases));
+      await tap(tester, 'auth-switch-signup');
+      await tester.enterText(find.byKey(const ValueKey('auth-name')), 'An');
+      await signInFields(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('auth-confirm-password')),
+        'password123',
+      );
+      await tap(tester, 'auth-consent');
+      await tap(tester, 'auth-submit');
+      expect(auth.signUps, 1);
+      expect(find.textContaining('Tạo tài khoản thành công'), findsOneWidget);
+      expect(find.byKey(const ValueKey('auth-confirm-password')), findsNothing);
+      expect(find.text('an@example.com'), findsOneWidget);
+      expect(find.byType(VstudyFooter), findsNothing);
+      expect(auth.signIns, 0);
     },
   );
 

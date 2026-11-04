@@ -16,7 +16,7 @@ Lần chạy mặc định mở giao diện **Đăng nhập** với nền kem ch
 
 Ứng dụng mặc định dùng Supabase thật; cần cấu hình URL và publishable/anon key qua `--dart-define-from-file=config/dev.json`. Chỉ khi chủ động đặt `--dart-define=LIVE_BACKEND=false` mới mở bản xem thử. Trong bản xem thử, các nút xác thực thật được tắt. Nhấn **Xem thử ứng dụng** để vào Trang chủ với dữ liệu minh họa. Để vào thẳng Trang chủ mẫu, dùng cả `--dart-define=LIVE_BACKEND=false --dart-define=SKIP_AUTH_PREVIEW=true`.
 
-Khi bật `LIVE_BACKEND=true`, Supabase xử lý đăng nhập, đăng ký, xác nhận/gửi lại email, Google OAuth và đặt lại mật khẩu. Chỉ phiên đăng nhập hợp lệ mới mở Trang chủ; đăng ký đang chờ xác nhận email không mở dữ liệu cá nhân. Callback PKCE được xử lý chung lúc khởi động và khi ứng dụng đang mở; Android/iOS đã có cấu hình URI. Không cần migration hoặc Edge Function mới cho thay đổi xác thực này. Xem [cấu hình Email Auth, Google và cách kiểm tra](docs/auth-upgrade.md).
+Khi bật `LIVE_BACKEND=true`, Supabase xử lý đăng nhập, đăng ký, Google OAuth và đặt lại mật khẩu. Với Confirm email đã tắt, đăng ký thành công quay về Đăng nhập, không tự mở Trang chủ. Nếu server vẫn bật Confirm email, ứng dụng tiếp tục hỗ trợ xác nhận/gửi lại email. Chỉ phiên đăng nhập hợp lệ mới mở Trang chủ; đăng ký đang chờ xác nhận email không mở dữ liệu cá nhân. Callback PKCE được xử lý chung lúc khởi động và khi ứng dụng đang mở; Android/iOS đã có cấu hình URI. Không cần migration hoặc Edge Function mới cho thay đổi xác thực này. Xem [cấu hình Email Auth, Google và cách kiểm tra](docs/auth-upgrade.md).
 
 ## Thư viện tài liệu theo thiết kế mới
 
@@ -141,7 +141,7 @@ Lệnh `db push` áp dụng migration thật. Đọc migration trước khi ch�
 
 Trong Supabase Dashboard:
 
-- Bật Email Auth, yêu cầu xác nhận email và mật khẩu tối thiểu 8 ký tự. Cấu hình SMTP để gửi email thật.
+- Bật Email Auth, tắt Confirm email để đăng ký không cần xác nhận email và đặt mật khẩu tối thiểu 8 ký tự. Cấu hình SMTP để gửi email thật.
 - Thêm `io.vstudy.app://login-callback/` vào Auth → URL Configuration → Redirect URLs.
 - Nếu dùng Google: cấu hình Google provider và client ID/secret trong Supabase. Google OAuth cần callback `https://YOUR_PROJECT.supabase.co/auth/v1/callback`; ứng dụng nhận kết quả qua URI ở trên.
 - Bật Gemini API cho khóa của bạn. Không đưa khóa Gemini hoặc Supabase service role vào Flutter.

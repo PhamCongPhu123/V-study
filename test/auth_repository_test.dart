@@ -117,10 +117,12 @@ void main() {
     late List<({String method, Uri uri, Map<String, dynamic>? body})> calls;
     String? failure;
     String? legacyMessage;
+    var signupIssuesSession = false;
     var failureStatus = HttpStatus.badRequest;
     setUp(() async {
       failure = null;
       legacyMessage = null;
+      signupIssuesSession = false;
       failureStatus = HttpStatus.badRequest;
       calls = [];
       storage = _Storage();
@@ -145,6 +147,9 @@ void main() {
             }),
           );
         } else if (request.uri.pathSegments.last == 'token') {
+          request.response.write(jsonEncode(session()));
+        } else if (request.uri.pathSegments.last == 'signup' &&
+            signupIssuesSession) {
           request.response.write(jsonEncode(session()));
         } else if (request.uri.pathSegments.last == 'signup' ||
             request.uri.pathSegments.last == 'user') {
@@ -196,6 +201,26 @@ void main() {
         expect(repository.currentUser!.id, owner);
         expect(calls.single.uri.queryParameters['grant_type'], 'password');
         expect(calls.single.body!['password'], ' secure password ');
+      },
+    );
+    test(
+      'signup without email confirmation waits for explicit password login',
+      () async {
+        signupIssuesSession = true;
+        final users = <Object?>[];
+        final subscription = repository.userChanges.listen(users.add);
+        addTearDown(subscription.cancel);
+        final result = await repository.signUp(
+          'An',
+          'an@example.com',
+          'password123',
+        );
+        await Future<void>.delayed(Duration.zero);
+        expect(result.needsEmailConfirmation, isFalse);
+        expect(repository.currentUser, isNull);
+        expect(users.where((user) => user != null), isEmpty);
+        await repository.signIn('an@example.com', 'password123');
+        expect(repository.currentUser!.id, owner);
       },
     );
     test('unconfirmed email becomes a typed, safe domain failure', () async {
