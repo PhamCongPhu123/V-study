@@ -15,7 +15,7 @@ export 'auth_page.dart';
 export 'password_recovery_page.dart';
 
 AuthFlowRepository? _authFlow(AuthRepository auth) =>
-    auth is AuthFlowRepository ? auth : null;
+    auth is AuthFlowRepository ? auth as AuthFlowRepository : null;
 
 class VstudyApp extends StatelessWidget {
   const VstudyApp({
