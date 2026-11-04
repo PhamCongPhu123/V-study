@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 import '../core/app_exception.dart';
+import 'analytics.dart';
+import 'analytics_repository.dart';
 import 'entities.dart';
 import 'repositories.dart';
 
@@ -11,12 +13,124 @@ class VstudyUseCases {
     required this.documents,
     required this.quizzes,
     required this.assistant,
+    this.analytics,
   });
   final AuthRepository auth;
   final StudyRepository study;
   final DocumentRepository documents;
   final QuizRepository quizzes;
   final AssistantRepository assistant;
+  final AnalyticsRepository? analytics;
+
+  AnalyticsRepository get _analytics {
+    final repository = analytics;
+    if (repository == null) {
+      throw const AppException('Thống kê chưa được cấu hình.');
+    }
+    return repository;
+  }
+
+  Future<void> saveLearningGoals(LearningGoals goals) {
+    if (goals.weeklyMinutes < 60 || goals.weeklyMinutes > 10080) {
+      throw const AppException('Mục tiêu tuần cần từ 60 đến 10080 phút.');
+    }
+    if (goals.studyDaysPerWeek < 1 || goals.studyDaysPerWeek > 7) {
+      throw const AppException('Số ngày học cần từ 1 đến 7 ngày mỗi tuần.');
+    }
+    if (goals.flashcardsPerDay < 1 || goals.flashcardsPerDay > 1000) {
+      throw const AppException(
+        'Mục tiêu flashcard cần từ 1 đến 1000 thẻ/ngày.',
+      );
+    }
+    bool isDateOnly(DateTime date) =>
+        date.hour == 0 &&
+        date.minute == 0 &&
+        date.second == 0 &&
+        date.millisecond == 0 &&
+        date.microsecond == 0;
+    if (!isDateOnly(goals.semesterStart) || !isDateOnly(goals.semesterEnd)) {
+      throw const AppException('Ngày học kỳ không bao gồm giờ.');
+    }
+    // Academic dates are calendar values, not instants to shift across zones.
+    final start = goals.semesterStart;
+    final end = goals.semesterEnd;
+    final days = DateTime.utc(
+      end.year,
+      end.month,
+      end.day,
+    ).difference(DateTime.utc(start.year, start.month, start.day)).inDays;
+    if (days < 7 || days > 366) {
+      throw const AppException('Học kỳ cần kéo dài từ 7 đến 366 ngày.');
+    }
+    return _analytics.saveGoals(
+      LearningGoals(
+        weeklyMinutes: goals.weeklyMinutes,
+        studyDaysPerWeek: goals.studyDaysPerWeek,
+        flashcardsPerDay: goals.flashcardsPerDay,
+        semesterStart: DateTime(start.year, start.month, start.day),
+        semesterEnd: DateTime(end.year, end.month, end.day),
+      ),
+    );
+  }
+
+  Future<void> logFocusSession({
+    required DateTime startedAt,
+    required int plannedMinutes,
+    required int focusedMinutes,
+    required int interruptions,
+    String? subjectId,
+  }) {
+    if (plannedMinutes < 1 ||
+        plannedMinutes > 1440 ||
+        focusedMinutes < 0 ||
+        focusedMinutes > plannedMinutes) {
+      throw const AppException(
+        'Thời gian tập trung cần từ 0 đến thời gian dự kiến (1–1440 phút).',
+      );
+    }
+    if (interruptions < 0 || interruptions > 1000) {
+      throw const AppException('Số lần gián đoạn cần từ 0 đến 1000.');
+    }
+    if (startedAt
+        .add(Duration(minutes: plannedMinutes))
+        .isAfter(DateTime.now().add(const Duration(minutes: 1)))) {
+      throw const AppException('Chỉ ghi nhận phiên tập trung đã hoàn thành.');
+    }
+    return _analytics.logFocusSession(
+      startedAt: startedAt,
+      plannedMinutes: plannedMinutes,
+      focusedMinutes: focusedMinutes,
+      interruptions: interruptions,
+      subjectId: subjectId,
+    );
+  }
+
+  Future<void> logFlashcardSession({
+    required DateTime reviewedAt,
+    required int reviewedCards,
+    required int rememberedCards,
+    String? subjectId,
+  }) {
+    if (reviewedCards < 1 ||
+        reviewedCards > 10000 ||
+        rememberedCards < 0 ||
+        rememberedCards > reviewedCards) {
+      throw const AppException(
+        'Số thẻ ôn cần từ 1 đến 10000; số thẻ nhớ không vượt số thẻ ôn.',
+      );
+    }
+    if (reviewedAt.isAfter(DateTime.now())) {
+      throw const AppException(
+        'Thời điểm ôn flashcard không được ở tương lai.',
+      );
+    }
+    return _analytics.logFlashcardSession(
+      reviewedAt: reviewedAt,
+      reviewedCards: reviewedCards,
+      rememberedCards: rememberedCards,
+      subjectId: subjectId,
+    );
+  }
 
   String _email(String email) {
     final value = email.trim();

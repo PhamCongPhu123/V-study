@@ -21,6 +21,19 @@ Footer chung có thứ tự **Lịch → Quiz → Trang chủ → Thống kê �
 
 **Backend thật:** sau migration ban đầu, áp dụng file mới `supabase/migrations/202611030002_quiz_learning.sql`, rồi deploy lại `generate-quiz`. Không chạy lại migration đầu tiên. Xem [hướng dẫn nâng cấp Quiz](docs/quiz-backend-upgrade.md) và [kết quả xác minh](docs/quiz-verification.md).
 
+## Thống kê theo các frame mới
+
+Tab biểu đồ mở menu gồm **Thống kê học tập, Tập trung, Quiz, Theo môn học, Mục tiêu và chuỗi học, Báo cáo tuần, Flashcard**. Các trang dùng nền kem chuyển xanh nhạt, thẻ trắng/navy, điểm nhấn vàng; footer và nút AI vàng vẫn hiện khi điều hướng.
+
+- **Học tập:** biểu đồ tuần, lịch nhiệt tháng có thể chọn ngày, đường xu hướng học kỳ, ngày/tuần học nhiều nhất, so sánh với kỳ trước và tiến độ mục tiêu. Tuần bắt đầu thứ Hai, tháng theo lịch thật, ngày học kỳ có thể chỉnh. Biểu đồ không vẽ hoạt động chưa xảy ra.
+- **Quiz:** điểm trung bình và số câu đúng/sai trong 7 ngày, so sánh 7 ngày trước; mức nắm vững chương lấy đáp án mới nhất tích lũy. Nút luyện câu sai mở đúng các câu đang sai, không suy đoán từ tỷ lệ tiến độ.
+- **Theo môn:** lọc thời gian học, kết quả quiz, lượt ôn thẻ và việc học đã hoàn thành; tiến độ từng chương và nút mở lộ trình quiz của môn.
+- **Mục tiêu:** sửa phút học/tuần, số ngày học, mục tiêu ôn flashcard và ngày học kỳ; xem chuỗi hiện tại, kỷ lục và từng ngày. Mục tiêu học theo ngày dùng chung hồ sơ ở Trang chủ.
+- **Tập trung / Flashcard:** xem lịch sử và ghi nhận phiên thực tế. Tỷ lệ tập trung là phút tập trung/phút dự kiến; mức ghi nhớ là lượt nhớ đúng/lượt ôn. Chưa ghi nhận thì hiển thị thiếu dữ liệu, không tự tạo tỷ lệ. Flashcard đếm lượt ôn, không phải số thẻ duy nhất; focus được lưu riêng, không tự cộng hai lần vào giờ học.
+- **Báo cáo tuần:** tổng hợp kết quả thực tế và sao chép nội dung để sử dụng khi cần.
+
+Bản mẫu mặc định có lịch sử minh họa sáu tháng để xem đủ biểu đồ, không cần SQL hoặc đăng nhập. Các thay đổi mẫu chỉ giữ trong phiên. Với backend thật, áp dụng thêm `supabase/migrations/202611030003_statistics.sql` **sau** hai migration trước; không cần deploy lại Edge Function cho phần thống kê. Xem [nâng cấp backend Thống kê](docs/statistics-backend-upgrade.md) và [phạm vi kiểm chứng](docs/statistics-verification.md).
+
 Mặc định mở bản mẫu không cần đăng nhập hoặc khóa Supabase. Dữ liệu minh họa chỉ lưu trong phiên chạy; phần chat/quiz mô phỏng được ghi rõ là minh họa.
 
 Để chạy trong Android Studio: chọn `lib/main.dart`, chọn thiết bị Android và bấm Run. Hoặc dùng Terminal:

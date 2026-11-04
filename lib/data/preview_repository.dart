@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import '../core/app_exception.dart';
+import '../domain/analytics.dart';
+import '../domain/analytics_repository.dart';
 import '../domain/entities.dart';
 import '../domain/repositories.dart';
 import '../domain/study_metrics.dart';
@@ -12,7 +14,8 @@ class PreviewRepository
         StudyRepository,
         DocumentRepository,
         QuizRepository,
-        AssistantRepository {
+        AssistantRepository,
+        AnalyticsRepository {
   PreviewRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     final today = localDay(_now);
     _events.addAll([
@@ -119,6 +122,7 @@ class PreviewRepository
       ),
     );
     _seedLearningQuizzes();
+    _seedAnalyticsHistory();
     _threads.add(
       ChatThread(
         id: 'intro-chat',
@@ -185,10 +189,14 @@ class PreviewRepository
   final _chapters = <QuizChapter>[];
   final _keys = <String, (int, String)>{};
   final _practice = <String, (String, AnswerReview, DateTime)>{};
+  final _analyticsPracticeHistory = <(String, AnswerReview, DateTime)>[];
   final _attempts = <QuizAttempt>[];
   final _submitted = <String, Map<String, int>>{};
   final _threads = <ChatThread>[];
   final _messages = <String, List<ChatMessage>>{};
+  LearningGoals? _learningGoals;
+  final _focusSessions = <FocusSession>[];
+  final _flashcardSessions = <FlashcardSession>[];
 
   VstudyUseCases get useCases => VstudyUseCases(
     auth: const _PreviewAuth(),
@@ -196,7 +204,240 @@ class PreviewRepository
     documents: this,
     quizzes: this,
     assistant: this,
+    analytics: this,
   );
+
+  // Seed once, rather than on refresh, so edits and newly logged activity remain
+  // visible. These are explicitly prototype records, not real learner metrics.
+  void _seedAnalyticsHistory() {
+    _learningGoals = LearningGoals.defaults(_now);
+    final today = localDay(_now);
+    const subjects = ['philosophy', 'math', 'law', 'design', 'network'];
+    for (var daysAgo = 0; daysAgo <= 183; daysAgo++) {
+      final date = DateTime(today.year, today.month, today.day - daysAgo);
+      final active =
+          daysAgo < 7 || (date.weekday != DateTime.sunday && daysAgo % 11 != 0);
+      if (!active) {
+        continue;
+      }
+      final subject = subjects[daysAgo % subjects.length];
+      if (daysAgo >= 7) {
+        // Preserve the existing seven daily sessions used by the home preview.
+        _sessions.add(
+          StudySession(
+            id: 'analytics-study-$daysAgo',
+            startedAt: DateTime(date.year, date.month, date.day, 18, 10),
+            durationMinutes: 55 + (daysAgo * 17) % 91,
+            subjectId: subject,
+          ),
+        );
+      }
+      final planned = [25, 40, 50][daysAgo % 3];
+      _focusSessions.add(
+        FocusSession(
+          id: 'analytics-focus-$daysAgo',
+          startedAt: daysAgo == 0
+              ? _now.subtract(const Duration(hours: 2))
+              : DateTime(date.year, date.month, date.day, 18, 10),
+          plannedMinutes: planned,
+          focusedMinutes: planned - 2 - daysAgo % 7,
+          interruptions: daysAgo % 4,
+          subjectId: subject,
+        ),
+      );
+      final reviewed = 15 + (daysAgo * 7) % 26;
+      _flashcardSessions.add(
+        FlashcardSession(
+          id: 'analytics-flashcards-$daysAgo',
+          reviewedAt: daysAgo == 0
+              ? _now.subtract(const Duration(minutes: 45))
+              : DateTime(date.year, date.month, date.day, 20, 30),
+          reviewedCards: reviewed,
+          rememberedCards: reviewed - 2 - daysAgo % 6,
+          subjectId: subject,
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<AnalyticsSnapshot> loadSnapshot({required DateTime now}) async =>
+      AnalyticsSnapshot(
+        now: now.toLocal(),
+        profile: _profile,
+        goals: _learningGoals ?? LearningGoals.defaults(now),
+        subjects: List.unmodifiable(_subjects),
+        studySessions: List.unmodifiable(
+          _sessions.where((session) => !session.startedAt.isAfter(now)),
+        ),
+        quizzes: List.unmodifiable(_quizzes),
+        quizAttempts: List.unmodifiable(
+          _attempts.where((attempt) => !attempt.submittedAt.isAfter(now)),
+        ),
+        focusSessions: List.unmodifiable(
+          _focusSessions.where((session) => !session.startedAt.isAfter(now)),
+        ),
+        flashcardSessions: List.unmodifiable(
+          _flashcardSessions.where(
+            (session) => !session.reviewedAt.isAfter(now),
+          ),
+        ),
+        tasks: [
+          for (final event in _events)
+            if (!event.startsAt.isAfter(now))
+              for (final task in event.tasks)
+                LearningTask(
+                  date: event.startsAt.toLocal(),
+                  completed: task.isCompleted,
+                  subjectId: event.subjectId,
+                ),
+        ],
+        chapterMastery: _chapterMasteryThrough(now),
+      );
+
+  List<ChapterMastery> _chapterMasteryThrough(DateTime until) {
+    final latest = <String, (AnswerReview, DateTime)>{};
+    void include(AnswerReview answer, DateTime answeredAt) {
+      if (answeredAt.isAfter(until)) {
+        return;
+      }
+      final previous = latest[answer.questionId];
+      if (previous == null || !answeredAt.isBefore(previous.$2)) {
+        latest[answer.questionId] = (answer, answeredAt);
+      }
+    }
+
+    for (final attempt in _attempts) {
+      for (final answer in attempt.review) {
+        include(answer, attempt.submittedAt);
+      }
+    }
+    for (final practice in _analyticsPracticeHistory) {
+      include(practice.$2, practice.$3);
+    }
+    return [
+      for (final chapter in _chapters)
+        (() {
+          final ids = {
+            for (final quiz in _quizzes)
+              if (quiz.chapterId == chapter.id)
+                for (final question in _questions[quiz.id] ?? <QuizQuestion>[])
+                  question.id,
+          };
+          final answers = ids
+              .map((id) => latest[id]?.$1)
+              .whereType<AnswerReview>();
+          return ChapterMastery(
+            id: chapter.id,
+            subjectId: chapter.subjectId,
+            title: chapter.title,
+            position: chapter.position,
+            totalQuestions: ids.length,
+            answeredQuestions: answers
+                .where((a) => a.selectedOption >= 0)
+                .length,
+            correctQuestions: answers
+                .where((a) => a.selectedOption == a.correctOption)
+                .length,
+          );
+        })(),
+    ];
+  }
+
+  @override
+  Future<void> saveGoals(LearningGoals goals) async {
+    final start = goals.semesterStart;
+    final end = goals.semesterEnd;
+    final days = DateTime.utc(
+      end.year,
+      end.month,
+      end.day,
+    ).difference(DateTime.utc(start.year, start.month, start.day)).inDays;
+    if (goals.weeklyMinutes < 60 ||
+        goals.weeklyMinutes > 10080 ||
+        goals.studyDaysPerWeek < 1 ||
+        goals.studyDaysPerWeek > 7 ||
+        goals.flashcardsPerDay < 1 ||
+        goals.flashcardsPerDay > 1000 ||
+        days < 7 ||
+        days > 366) {
+      throw const AppException('Mục tiêu học tập chưa hợp lệ.');
+    }
+    _learningGoals = LearningGoals(
+      weeklyMinutes: goals.weeklyMinutes,
+      studyDaysPerWeek: goals.studyDaysPerWeek,
+      flashcardsPerDay: goals.flashcardsPerDay,
+      semesterStart: DateTime(start.year, start.month, start.day),
+      semesterEnd: DateTime(end.year, end.month, end.day),
+    );
+  }
+
+  void _requireAnalyticsSubject(String? subjectId) {
+    if (subjectId != null &&
+        !_subjects.any((subject) => subject.id == subjectId)) {
+      throw const AppException('Không tìm thấy môn học.');
+    }
+  }
+
+  @override
+  Future<void> logFocusSession({
+    required DateTime startedAt,
+    required int plannedMinutes,
+    required int focusedMinutes,
+    required int interruptions,
+    String? subjectId,
+  }) async {
+    _requireAnalyticsSubject(subjectId);
+    final now = DateTime.now();
+    if (plannedMinutes < 1 ||
+        plannedMinutes > 1440 ||
+        focusedMinutes < 0 ||
+        focusedMinutes > plannedMinutes ||
+        interruptions < 0 ||
+        interruptions > 1000 ||
+        startedAt.isAfter(now) ||
+        startedAt
+            .add(Duration(minutes: plannedMinutes))
+            .isAfter(now.add(const Duration(minutes: 1)))) {
+      throw const AppException('Phiên tập trung đã hoàn tất chưa hợp lệ.');
+    }
+    _focusSessions.add(
+      FocusSession(
+        id: _id(),
+        startedAt: startedAt.toLocal(),
+        plannedMinutes: plannedMinutes,
+        focusedMinutes: focusedMinutes,
+        interruptions: interruptions,
+        subjectId: subjectId,
+      ),
+    );
+  }
+
+  @override
+  Future<void> logFlashcardSession({
+    required DateTime reviewedAt,
+    required int reviewedCards,
+    required int rememberedCards,
+    String? subjectId,
+  }) async {
+    _requireAnalyticsSubject(subjectId);
+    if (reviewedCards < 1 ||
+        reviewedCards > 10000 ||
+        rememberedCards < 0 ||
+        rememberedCards > reviewedCards ||
+        reviewedAt.isAfter(DateTime.now())) {
+      throw const AppException('Lượt ôn flashcard chưa hợp lệ.');
+    }
+    _flashcardSessions.add(
+      FlashcardSession(
+        id: _id(),
+        reviewedAt: reviewedAt.toLocal(),
+        reviewedCards: reviewedCards,
+        rememberedCards: rememberedCards,
+        subjectId: subjectId,
+      ),
+    );
+  }
 
   @override
   Future<Profile> getProfile() async => _profile;
@@ -1001,7 +1242,9 @@ class PreviewRepository
       correctOption: key.$1,
       explanation: key.$2,
     );
-    _practice[questionId] = (quizId, review, _answeredNow());
+    final recorded = (quizId, review, _answeredNow());
+    _practice[questionId] = recorded;
+    _analyticsPracticeHistory.add(recorded);
     return review;
   }
 

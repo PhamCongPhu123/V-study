@@ -6,6 +6,7 @@ import 'data/document_repository.dart';
 import 'data/quiz_repository.dart';
 import 'data/assistant_repository.dart';
 import 'data/preview_repository.dart';
+import 'data/analytics_repository.dart';
 import 'domain/use_cases.dart';
 import 'presentation/app.dart';
 
@@ -42,6 +43,7 @@ Future<void> main() async {
           documents: SupabaseDocumentRepository(client),
           quizzes: SupabaseQuizRepository(client),
           assistant: SupabaseAssistantRepository(client),
+          analytics: SupabaseAnalyticsRepository(client),
         ),
       ),
     );

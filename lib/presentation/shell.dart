@@ -69,12 +69,7 @@ class _VstudyShellState extends State<VstudyShell> {
     0 => CalendarPage(useCases: widget.useCases),
     1 => QuizPage(useCases: widget.useCases),
     2 => HomePage(useCases: widget.useCases, onNavigate: _select),
-    3 => _FeatureFrame(
-      title: 'Thống kê học tập',
-      preview: widget.preview,
-      useCases: widget.useCases,
-      child: StatisticsPage(useCases: widget.useCases),
-    ),
+    3 => StatisticsPage(useCases: widget.useCases),
     4 => DocumentsPage(useCases: widget.useCases),
     _ => _FeatureFrame(
       title: 'Trợ lý V-study',
@@ -134,7 +129,20 @@ class _VstudyShellState extends State<VstudyShell> {
       },
       child: Scaffold(
         body: DecoratedBox(
-          decoration: const BoxDecoration(gradient: VstudyColors.background),
+          decoration: BoxDecoration(
+            gradient: _footerIndex == 3
+                ? const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFFF1DDB7),
+                      Color(0xFFF9F6EF),
+                      Color(0xFFE0E7F6),
+                    ],
+                    stops: [0, .40, 1],
+                  )
+                : VstudyColors.background,
+          ),
           child: SafeArea(
             bottom: false,
             child: IndexedStack(
