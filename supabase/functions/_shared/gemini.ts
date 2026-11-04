@@ -1,11 +1,18 @@
 import { Config, Fetcher, GeminiPart, Message, timedFetch } from "./backend.ts";
 import { HttpError } from "./http.ts";
+import {
+  summarySchema,
+  validateSummary,
+  validateWorksheet,
+  worksheetSchema,
+} from "./study_content.ts";
 
 export interface GeneratedQuestion {
   question: string;
   options: string[];
   correct_option: number;
   explanation: string;
+  hint?: string;
 }
 
 const baseInstruction = `Bạn là trợ lý học tập Vstudy. Trả lời bằng tiếng Việt, chính xác, dễ hiểu.
@@ -28,17 +35,22 @@ const modeInstructions: Record<string, string> = {
 export class Gemini {
   constructor(readonly config: Config, readonly fetcher: Fetcher = fetch) {}
 
-  private async generate(system: string, contents: unknown[], structured = false): Promise<string> {
+  private async generate(
+    system: string,
+    contents: unknown[],
+    structured = false,
+    schema?: Record<string, unknown>,
+  ): Promise<string> {
     if (!/^[A-Za-z0-9._-]+$/.test(this.config.geminiModel)) {
       throw new HttpError(503, "Tên mô hình AI chưa hợp lệ.", "configuration_missing");
     }
     const generationConfig: Record<string, unknown> = {
       temperature: structured ? 0.2 : 0.5,
-      maxOutputTokens: structured ? 16384 : 4096,
+      maxOutputTokens: structured ? 24576 : 4096,
     };
     if (structured) {
       generationConfig.responseMimeType = "application/json";
-      generationConfig.responseSchema = {
+      generationConfig.responseSchema = schema ?? {
         type: "OBJECT",
         required: ["questions"],
         properties: {
@@ -46,12 +58,13 @@ export class Gemini {
             type: "ARRAY",
             items: {
               type: "OBJECT",
-              required: ["question", "options", "correct_option", "explanation"],
+              required: ["question", "options", "correct_option", "explanation", "hint"],
               properties: {
                 question: { type: "STRING" },
                 options: { type: "ARRAY", items: { type: "STRING" }, minItems: 4, maxItems: 4 },
                 correct_option: { type: "INTEGER", minimum: 0, maximum: 3 },
                 explanation: { type: "STRING" },
+                hint: { type: "STRING" },
               },
             },
           },
@@ -113,10 +126,52 @@ export class Gemini {
     return await this.generate(`${baseInstruction}\n${modeInstructions[mode]}`, contents);
   }
 
-  async quiz(topic: string, count: number, document: GeminiPart[]): Promise<GeneratedQuestion[]> {
+  async material(
+    kind: "summary" | "worksheet",
+    topic: string,
+    count: number,
+    difficulty: string,
+    kinds: string[],
+    document: GeminiPart[],
+  ): Promise<Record<string, unknown>> {
+    const prompt = kind === "summary"
+      ? `Tóm tắt các tài liệu đã chọn bằng tiếng Việt. Chỉ dùng kiến thức có trong tài liệu.
+Tạo brief (1–8 ý ngắn), sections (1–12 nhóm có title và points), keywords (1–12 từ khóa),
+mind_map (1–8 nhánh có title và points ngắn để vẽ sơ đồ). Nếu tài liệu thiếu nội dung, nêu rõ giới hạn trong phần tóm tắt.
+Không bịa số trang. Mọi trường cần có nội dung hữu ích, không Markdown hoặc HTML.`
+      : `Tạo đúng ${count} câu tự luyện cho chủ đề: ${topic}. Độ khó: ${difficulty}.
+Chỉ dùng các dạng ${
+        kinds.join(", ")
+      }; mỗi dạng được chọn phải có ít nhất một câu. Nếu có tài liệu, câu hỏi phải dựa trên tài liệu.
+multiple_choice: 4 lựa chọn khác nhau, correct_option 0–3; true_false: options đúng thứ tự ["Đúng","Sai"], correct_option 0–1;
+essay: options [], correct_option -1, sample_answer là đáp án mẫu để tự đối chiếu. Với các dạng khác, sample_answer là chuỗi rỗng.
+Mỗi câu có question, explanation và hint ngắn chỉ dẫn cách suy nghĩ, không tiết lộ thẳng đáp án. Không lặp câu. Đây là tài liệu tự luyện, không phải bài thi được chấm tự động.
+Trả về JSON đúng schema, không Markdown.`;
+    const result = await this.generate(
+      baseInstruction,
+      [{ role: "user", parts: [...document, { text: prompt }] }],
+      true,
+      kind === "summary" ? summarySchema : worksheetSchema,
+    );
+    let data: unknown;
+    try {
+      data = JSON.parse(result);
+    } catch {
+      throw new HttpError(502, "AI trả về nội dung chưa hợp lệ.", "ai_invalid_material");
+    }
+    return kind === "summary" ? validateSummary(data) : validateWorksheet(data, count, kinds);
+  }
+
+  async quiz(
+    topic: string,
+    count: number,
+    document: GeminiPart[],
+    difficulty = "medium",
+  ): Promise<GeneratedQuestion[]> {
     const prompt = `Tạo chính xác ${count} câu hỏi trắc nghiệm để ôn tập chủ đề: ${topic}.
-Mỗi câu có 4 lựa chọn khác nhau, đúng duy nhất một lựa chọn; correct_option là chỉ số từ 0 đến 3.
+Độ khó: ${difficulty}. Mỗi câu có 4 lựa chọn khác nhau, đúng duy nhất một lựa chọn; correct_option là chỉ số từ 0 đến 3.
 Mỗi câu có giải thích đáp án bằng tiếng Việt. Không lặp lại câu hỏi. Khi có tài liệu, chỉ tạo câu dựa trên tài liệu.
+Mỗi câu có hint ngắn (tối đa 300 ký tự), gợi ý cách suy nghĩ nhưng không nêu thẳng đáp án.
 Trả về JSON đúng schema, không Markdown.`;
     const text = await this.generate(baseInstruction, [{
       role: "user",
@@ -150,6 +205,7 @@ export function validateQuiz(value: unknown, expectedCount: number): GeneratedQu
       typeof row.question !== "string" || !row.question.trim() || row.question.length > 2000 ||
       typeof row.explanation !== "string" || !row.explanation.trim() ||
       row.explanation.length > 2000 ||
+      (row.hint !== undefined && (typeof row.hint !== "string" || row.hint.length > 300)) ||
       !Number.isInteger(row.correct_option) || Number(row.correct_option) < 0 ||
       Number(row.correct_option) > 3 ||
       !Array.isArray(row.options) || row.options.length !== 4 ||
@@ -165,6 +221,7 @@ export function validateQuiz(value: unknown, expectedCount: number): GeneratedQu
       options,
       correct_option: Number(row.correct_option),
       explanation: row.explanation.trim(),
+      ...(row.hint === undefined ? {} : { hint: (row.hint as string).trim() }),
     };
   });
 }

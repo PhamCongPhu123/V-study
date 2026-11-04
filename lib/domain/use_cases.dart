@@ -3,6 +3,7 @@ import '../core/app_exception.dart';
 import 'analytics.dart';
 import 'analytics_repository.dart';
 import 'account_repository.dart';
+import 'ai_workspace.dart';
 import 'entities.dart';
 import 'repositories.dart';
 
@@ -16,6 +17,7 @@ class VstudyUseCases {
     required this.assistant,
     this.analytics,
     this.account,
+    this.aiWorkspace,
   });
   final AuthRepository auth;
   final StudyRepository study;
@@ -24,6 +26,75 @@ class VstudyUseCases {
   final AssistantRepository assistant;
   final AnalyticsRepository? analytics;
   final AccountRepository? account;
+  final AiWorkspaceRepository? aiWorkspace;
+
+  Future<AiArtifact> createAiMaterial(AiMaterialRequest request) {
+    final workspace = aiWorkspace;
+    if (workspace == null) {
+      throw const AppException('Công cụ AI chưa được cấu hình.');
+    }
+    if (request.requestId.trim().isEmpty) {
+      throw const AppException('Yêu cầu AI chưa có mã xác nhận.');
+    }
+    final title = _text(request.title, 'Tiêu đề', 200);
+    final ids = request.documentIds;
+    if (ids.length > 3 ||
+        ids.toSet().length != ids.length ||
+        ids.any((id) => id.trim().isEmpty)) {
+      throw const AppException('Chọn tối đa 3 tài liệu khác nhau.');
+    }
+    if (request.kind == AiArtifactKind.summary && ids.isEmpty) {
+      throw const AppException('Chọn ít nhất một tài liệu để tóm tắt.');
+    }
+    if (request.kind != AiArtifactKind.summary &&
+        (request.questionCount < 1 ||
+            request.questionCount > 40 ||
+            request.exerciseKinds.isEmpty ||
+            request.exerciseKinds.toSet().length !=
+                request.exerciseKinds.length ||
+            request.questionCount < request.exerciseKinds.length ||
+            !['easy', 'medium', 'hard'].contains(request.difficulty))) {
+      throw const AppException(
+        'Chọn 1–40 câu, độ khó và ít nhất một dạng câu hỏi.',
+      );
+    }
+    if (request.kind == AiArtifactKind.quiz &&
+        (request.exerciseKinds.length != 1 ||
+            request.exerciseKinds.single != ExerciseKind.multipleChoice)) {
+      throw const AppException(
+        'Quiz có chấm điểm chỉ sử dụng câu trắc nghiệm.',
+      );
+    }
+    final topic = request.kind == AiArtifactKind.summary
+        ? ''
+        : _text(
+            request.topic.trim().isEmpty && ids.isNotEmpty
+                ? 'Ôn tập theo tài liệu đã chọn.'
+                : request.topic,
+            'Chủ đề',
+            2000,
+          );
+    return workspace.createMaterial(
+      AiMaterialRequest(
+        requestId: request.requestId,
+        kind: request.kind,
+        title: title,
+        topic: topic,
+        documentIds: List.unmodifiable(ids),
+        questionCount: request.kind == AiArtifactKind.summary
+            ? 0
+            : request.questionCount,
+        difficulty: request.kind == AiArtifactKind.summary
+            ? 'medium'
+            : request.difficulty,
+        exerciseKinds: request.kind == AiArtifactKind.summary
+            ? const []
+            : ExerciseKind.values
+                  .where(request.exerciseKinds.contains)
+                  .toList(),
+      ),
+    );
+  }
 
   AccountRepository get _account =>
       account ??

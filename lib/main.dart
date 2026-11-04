@@ -8,6 +8,7 @@ import 'data/assistant_repository.dart';
 import 'data/preview_repository.dart';
 import 'data/analytics_repository.dart';
 import 'data/account_repository.dart';
+import 'data/ai_workspace_repository.dart';
 import 'domain/use_cases.dart';
 import 'presentation/app.dart';
 
@@ -46,6 +47,7 @@ Future<void> main() async {
           assistant: SupabaseAssistantRepository(client),
           analytics: SupabaseAnalyticsRepository(client),
           account: SupabaseAccountRepository(client),
+          aiWorkspace: SupabaseAiWorkspaceRepository(client),
         ),
       ),
     );

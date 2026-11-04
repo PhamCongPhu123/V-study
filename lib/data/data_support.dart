@@ -216,6 +216,7 @@ QuizQuestion questionFromJson(Map<String, dynamic> row) => QuizQuestion(
   position: row['position'] as int,
   question: row['question'] as String,
   options: List<String>.from(row['options'] as List),
+  hint: row['hint'] as String? ?? '',
 );
 
 QuizAttempt attemptFromJson(Map<String, dynamic> row) => QuizAttempt(

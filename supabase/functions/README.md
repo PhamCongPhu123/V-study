@@ -78,3 +78,10 @@ Tests chạy 22 tình huống với fetch được tiêm phụ thuộc: xác th�
 quota/concurrency, giới hạn payload/tài liệu, chặn traversal, schema quiz, giữ kín đáp án, thứ tự
 lịch sử, và không lưu nửa lượt chat. Các tests này không gọi Supabase/Gemini thật; kiểm thử tích hợp
 live cần project và khóa riêng của bạn.
+# Công cụ học tập có cấu trúc
+
+`study-assistant` bổ sung endpoint tạo tóm tắt, đề tự luyện hỗn hợp và quiz từ tối đa 3 PDF/TXT (tổng tối đa 10 MiB). Áp dụng migration `202611040002_ai_workspace.sql` và deploy function này trước khi dùng công cụ với backend thật. Xem [hướng dẫn AI](../../docs/ai-workspace-upgrade.md) để biết luồng UI, kiểm chứng và giới hạn.
+
+Body gồm `request_id` (UUID ổn định khi retry), `kind` (`summary`/`worksheet`/`quiz`), `title`, `document_ids`; với đề thêm `topic`, `question_count` (1–40), `difficulty` (`easy`/`medium`/`hard`) và `question_kinds` (`multiple_choice`/`true_false`/`essay`). Summary cần ít nhất một nguồn; quiz có chấm điểm chỉ nhận `multiple_choice`. Owner không được lấy từ body. Kết quả là một hàng `ai_artifacts`; với quiz, `content` luôn rỗng và chỉ trả liên kết `quiz_id`, không trả khóa đáp án.
+
+Retry cùng ID và fingerprint trả lại nội dung đã lưu; thay đầu vào cần ID mới. Schema đầu ra được kiểm tra trước khi gọi RPC lưu nguyên tử. Quyền đọc/xóa thuộc owner; chỉ cột feedback được client sửa. `generate-quiz` cũ vẫn nhận 1–30 câu để giữ hợp đồng hiện tại; công cụ AI mới cho phép 40 câu và dùng cùng hệ thống chấm điểm. Deploy lại `generate-quiz` để thêm hint cho bộ đề mới từ màn hình Quiz.

@@ -8,6 +8,16 @@ Trang chủ và lịch được chỉnh theo ảnh mẫu mới: nền kem/vàng 
 
 Footer chung có thứ tự **Lịch → Quiz → Trang chủ → Thống kê → Tài liệu**; biểu tượng ngôi nhà nằm giữa và mở Trang chủ. AI mở bằng nút tròn vàng hình lấp lánh bên phải, tách khỏi footer. Footer giữ nguyên khi mở quiz, hội thoại hay tài liệu trong từng tab. Chạm lại biểu tượng tab sẽ trở về trang đầu của tab đó. Nút Back Android đóng trang con trước; từ AI trở về tab đã mở trước đó.
 
+## Trợ lý AI theo các frame mới
+
+Nhấn nút vàng lấp lánh để mở trang công cụ AI với nền kem chuyển xanh, thẻ giới thiệu navy, **Tóm tắt / Hỏi đáp / Tạo đề ôn**, hội thoại gần đây và nội dung đã tạo. Lộ trình và flashcard vẫn có ở các lối tắt bên dưới. Có thể gửi câu hỏi ngay từ ô nhập ở trang công cụ.
+
+- **Hỏi đáp:** chọn một tài liệu PDF/TXT hoặc hỏi đáp chung; bong bóng tin nhắn, trạng thái chờ, gợi ý câu hỏi, sao chép câu trả lời và lịch sử hội thoại. Tài liệu/chế độ được cố định sau khi bắt đầu hội thoại. Câu hỏi mở từ Quiz chỉ được điền sẵn, không tự gửi; các bản nháp AI đang có được giữ lại.
+- **Tóm tắt:** thư viện có tìm kiếm, lọc PDF/TXT, tải tệp mới và chọn tối đa 3 tài liệu với tổng dung lượng tối đa 10 MiB. Kết quả có ba tab **Ngắn gọn / Chi tiết / Sơ đồ**, từ khóa, sao chép và đánh giá hữu ích; lưu lại để mở từ trang công cụ.
+- **Tạo đề ôn:** 10/20/30/40 câu, độ khó Dễ/Vừa/Khó, chọn tài liệu hoặc nhập chủ đề. Nếu chỉ chọn trắc nghiệm, tạo quiz có đáp án riêng phía server, đồng hồ 30 phút và kết quả vào thống kê. Có gợi ý cho câu mới được tạo. Khi chọn đúng/sai hoặc tự luận, tạo đề tự luyện với phản hồi, gợi ý và đáp án mẫu; không tự chấm tự luận hoặc cộng điểm vào thống kê quiz.
+
+Bản mẫu không gọi Gemini hoặc đọc nội dung tài liệu, các màn hình hiển thị rõ dữ liệu minh họa. Với backend thật, cài migration `202611040002_ai_workspace.sql`, deploy function mới `study-assistant` và cập nhật `generate-quiz` để có gợi ý. Xem [hướng dẫn backend và kiểm chứng AI](docs/ai-workspace-upgrade.md).
+
 ## Tài khoản từ ảnh đại diện
 
 Chạm avatar ở góc trên bên phải Trang chủ để mở **Thông tin tài khoản**: avatar/tên/email, lớp/ngành, số giờ học và kết quả quiz trong 30 ngày, môn học, lối tắt chức năng và cài đặt. Số liệu lấy từ lịch sử học đã ghi nhận; chưa có quiz thì điểm hiển thị dấu gạch.
@@ -126,6 +136,7 @@ Tạo `supabase/functions/.env` từ `.env.example`, nhập khóa Gemini **trên
 supabase secrets set --env-file supabase/functions/.env
 supabase functions deploy ai-chat
 supabase functions deploy generate-quiz
+supabase functions deploy study-assistant
 ```
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` được Supabase cấp cho Edge runtime. Hai function tự xác thực access token bằng Auth API; cấu hình `verify_jwt = false` không bỏ bước xác thực này. Mô hình mặc định `gemini-2.5-flash`; đổi `GEMINI_MODEL` trong secrets nếu tài khoản của bạn dùng mô hình khác.

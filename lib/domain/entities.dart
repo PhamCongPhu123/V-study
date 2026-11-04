@@ -253,11 +253,13 @@ class QuizQuestion {
     required this.position,
     required this.question,
     required this.options,
+    this.hint = '',
   });
   final String id;
   final int position;
   final String question;
   final List<String> options;
+  final String hint;
 }
 
 class AnswerReview {

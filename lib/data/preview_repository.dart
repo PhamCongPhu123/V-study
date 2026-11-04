@@ -1,9 +1,11 @@
 import 'dart:typed_data';
+import 'dart:collection';
 
 import '../core/app_exception.dart';
 import '../domain/analytics.dart';
 import '../domain/analytics_repository.dart';
 import '../domain/account_repository.dart';
+import '../domain/ai_workspace.dart';
 import '../domain/entities.dart';
 import '../domain/repositories.dart';
 import '../domain/study_metrics.dart';
@@ -17,7 +19,8 @@ class PreviewRepository
         QuizRepository,
         AssistantRepository,
         AnalyticsRepository,
-        AccountRepository {
+        AccountRepository,
+        AiWorkspaceRepository {
   PreviewRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     final today = localDay(_now);
     _events.addAll([
@@ -125,6 +128,24 @@ class PreviewRepository
     );
     _seedLearningQuizzes();
     _seedAnalyticsHistory();
+    _documents.insertAll(0, [
+      StudyDocument(
+        id: 'demo-calculus-3',
+        title: 'Giải tích 1 - Chương 3',
+        storagePath: '',
+        mimeType: 'application/pdf',
+        sizeBytes: 1024 * 160,
+        createdAt: _now,
+      ),
+      StudyDocument(
+        id: 'demo-calculus-4',
+        title: 'Giải tích 1 - Chương 4',
+        storagePath: '',
+        mimeType: 'application/pdf',
+        sizeBytes: 1024 * 220,
+        createdAt: _now,
+      ),
+    ]);
     _threads.add(
       ChatThread(
         id: 'intro-chat',
@@ -202,6 +223,8 @@ class PreviewRepository
   final _submitted = <String, Map<String, int>>{};
   final _threads = <ChatThread>[];
   final _messages = <String, List<ChatMessage>>{};
+  final _artifacts = <AiArtifact>[];
+  final _materialSignatures = <String, String>{};
   LearningGoals? _learningGoals;
   final _focusSessions = <FocusSession>[];
   final _flashcardSessions = <FlashcardSession>[];
@@ -214,7 +237,145 @@ class PreviewRepository
     assistant: this,
     analytics: this,
     account: this,
+    aiWorkspace: this,
   );
+
+  static const _demoSummary = AiSummary(
+    brief: [
+      'Đạo hàm mô tả tốc độ biến thiên của hàm số.',
+      'Giới hạn là nền tảng để định nghĩa đạo hàm.',
+      'Dùng đạo hàm để khảo sát sự biến thiên và tìm cực trị.',
+    ],
+    sections: [
+      AiSection(
+        title: 'Khái niệm',
+        points: [
+          'Đạo hàm được định nghĩa bằng giới hạn của tỉ số gia số.',
+          'Nếu hàm có đạo hàm tại một điểm thì hàm liên tục tại điểm đó.',
+        ],
+      ),
+      AiSection(
+        title: 'Quy tắc',
+        points: [
+          'Đạo hàm của tổng bằng tổng các đạo hàm.',
+          'Với hàm hợp, cần nhân thêm đạo hàm của hàm bên trong.',
+        ],
+      ),
+    ],
+    keywords: ['Đạo hàm', 'Giới hạn', 'Hàm hợp', 'Cực trị'],
+    mindMap: [
+      AiSection(title: 'Nền tảng', points: ['Giới hạn', 'Tính liên tục']),
+      AiSection(title: 'Quy tắc', points: ['Tổng và tích', 'Hàm hợp']),
+      AiSection(title: 'Ứng dụng', points: ['Khảo sát hàm số', 'Tối ưu hóa']),
+    ],
+  );
+
+  @override
+  Future<List<AiArtifact>> listArtifacts() async =>
+      List.unmodifiable(_artifacts);
+  @override
+  Future<AiArtifact> createMaterial(AiMaterialRequest request) async {
+    final previous = _artifacts
+        .where((a) => a.id == request.requestId)
+        .firstOrNull;
+    if (previous != null) {
+      if (_materialSignatures[request.requestId] != request.signature) {
+        throw const AppException('Mã yêu cầu đã được dùng cho nội dung khác.');
+      }
+      return previous;
+    }
+    final docs = request.documentIds
+        .map((id) => _documents.where((d) => d.id == id).firstOrNull)
+        .toList();
+    if (docs.any((d) => d == null)) {
+      throw const AppException('Không tìm thấy tài liệu đã chọn.');
+    }
+    if (docs.fold<int>(0, (sum, d) => sum + d!.sizeBytes) > 10 * 1024 * 1024) {
+      throw const AppException('Tổng tài liệu cho một yêu cầu tối đa 10 MiB.');
+    }
+    String? quizId;
+    final exercises = <AiExercise>[];
+    if (request.kind != AiArtifactKind.summary &&
+        (request.questionCount < 1 || request.questionCount > 40)) {
+      throw const AppException('Chọn từ 1 đến 40 câu.');
+    }
+    if (request.kind == AiArtifactKind.quiz) {
+      quizId = await generate(
+        title: request.title,
+        topic: request.topic,
+        questionCount: request.questionCount,
+        documentId: request.documentIds.firstOrNull,
+        difficulty: request.difficulty,
+      );
+    } else if (request.kind == AiArtifactKind.worksheet) {
+      if (request.exerciseKinds.isEmpty) {
+        throw const AppException('Chọn ít nhất một dạng câu hỏi.');
+      }
+      for (var i = 0; i < request.questionCount; i++) {
+        final kind = request.exerciseKinds[i % request.exerciseKinds.length];
+        exercises.add(
+          AiExercise(
+            kind: kind,
+            question: kind == ExerciseKind.essay
+                ? 'Câu ${i + 1}: Giải thích một khái niệm quan trọng trong ${request.topic} và cho ví dụ.'
+                : kind == ExerciseKind.trueFalse
+                ? 'Câu ${i + 1}: Chia nhỏ kiến thức và tự kiểm tra giúp việc ôn tập hiệu quả hơn. Đúng hay sai?'
+                : 'Câu ${i + 1}: Cách nào giúp bạn hiểu sâu kiến thức trong ${request.topic}?',
+            options: kind == ExerciseKind.essay
+                ? const []
+                : kind == ExerciseKind.trueFalse
+                ? const ['Đúng', 'Sai']
+                : const [
+                    'Giải thích lại bằng lời của mình',
+                    'Chỉ học thuộc đáp án',
+                    'Bỏ qua ví dụ',
+                    'Không kiểm tra lại',
+                  ],
+            correctOption: kind == ExerciseKind.essay ? null : 0,
+            explanation:
+                'Đây là lời giải minh họa trong bản mẫu, không phân tích tài liệu và không gọi Gemini.',
+            sampleAnswer: kind == ExerciseKind.essay
+                ? 'Nêu định nghĩa bằng lời của bạn, giải thích ý nghĩa và đưa một ví dụ cụ thể.'
+                : '',
+            hint:
+                'Liên hệ kiến thức với một ví dụ và kiểm tra lại cách giải thích của bạn.',
+          ),
+        );
+      }
+    }
+    final artifact = AiArtifact(
+      id: request.requestId,
+      kind: request.kind,
+      title: request.title,
+      createdAt: DateTime.now(),
+      documentIds: request.documentIds,
+      sourceTitles: docs.map((d) => d!.title).toList(),
+      summary: request.kind == AiArtifactKind.summary ? _demoSummary : null,
+      exercises: exercises,
+      quizId: quizId,
+    );
+    _artifacts.insert(0, artifact);
+    _materialSignatures[request.requestId] = request.signature;
+    return artifact;
+  }
+
+  @override
+  Future<void> setFeedback(String artifactId, int? feedback) async {
+    if (feedback != null && feedback != -1 && feedback != 1) {
+      throw const AppException('Đánh giá chưa hợp lệ.');
+    }
+    final index = _artifacts.indexWhere((a) => a.id == artifactId);
+    if (index < 0) {
+      throw const AppException('Không tìm thấy nội dung AI.');
+    }
+    _artifacts[index] = _artifacts[index].withFeedback(feedback);
+  }
+
+  @override
+  Future<void> deleteArtifact(String artifactId) async {
+    _artifacts.removeWhere((a) => a.id == artifactId);
+    _materialSignatures.remove(artifactId);
+  }
 
   // Seed once, rather than on refresh, so edits and newly logged activity remain
   // visible. These are explicitly prototype records, not real learner metrics.
@@ -1068,6 +1229,8 @@ class PreviewRepository
         position: i,
         question: sample.$1,
         options: List.unmodifiable(options),
+        hint:
+            'Xác định khái niệm chính rồi loại trừ những phương án không phù hợp.',
       );
       _keys[question.id] = (rotation, sample.$3);
       return question;

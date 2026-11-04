@@ -26,7 +26,7 @@ class SupabaseQuizRepository extends SupabaseAccess implements QuizRepository {
     final rows = await loadPages(
       (from, to) => client
           .from('quiz_questions')
-          .select('id,position,question,options')
+          .select('id,position,question,options,hint')
           .eq('owner_id', owner)
           .eq('quiz_id', quizId)
           .order('position')

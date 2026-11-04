@@ -76,8 +76,9 @@ class _VstudyShellState extends State<VstudyShell> {
   }
 
   void _openAi(String? prompt) {
-    if (prompt != null || _aiPrompt != null) {
-      _navigators[5].currentState?.popUntil((route) => route.isFirst);
+    if (prompt != null) {
+      // Keep existing AI routes and their drafts. A supplied prompt opens a
+      // new conversation above them, without sending it automatically.
       _aiPrompt = prompt;
       _epochs[5].value++;
     }
@@ -108,12 +109,12 @@ class _VstudyShellState extends State<VstudyShell> {
     ),
     3 => StatisticsPage(useCases: widget.useCases),
     4 => DocumentsPage(useCases: widget.useCases),
-    _ => _FeatureFrame(
-      title: 'Trợ lý V-study',
-      preview: widget.preview,
+    _ => AiPage(
       useCases: widget.useCases,
-      onBack: _closeAi,
-      child: AiPage(useCases: widget.useCases, initialPrompt: _aiPrompt),
+      initialPrompt: _aiPrompt,
+      preview: widget.preview,
+      onClose: _closeAi,
+      promptVersion: _epochs[5].value,
     ),
   };
 
@@ -138,7 +139,7 @@ class _VstudyShellState extends State<VstudyShell> {
           builder: (_) => ValueListenableBuilder<int>(
             valueListenable: _epochs[index],
             builder: (_, epoch, _) => KeyedSubtree(
-              key: ValueKey('$index-$epoch'),
+              key: ValueKey(index == 5 ? 'ai-root' : '$index-$epoch'),
               child: _page(index),
             ),
           ),
@@ -212,61 +213,5 @@ class _VstudyShellState extends State<VstudyShell> {
         ),
       ),
     ),
-  );
-}
-
-class _FeatureFrame extends StatelessWidget {
-  const _FeatureFrame({
-    required this.title,
-    required this.child,
-    required this.preview,
-    required this.useCases,
-    this.onBack,
-  });
-  final VoidCallback? onBack;
-  final String title;
-  final Widget child;
-  final bool preview;
-  final VstudyUseCases useCases;
-  @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
-        child: Row(
-          children: [
-            if (onBack != null)
-              IconButton(
-                tooltip: 'Quay lại',
-                onPressed: onBack,
-                icon: const Icon(Icons.arrow_back),
-              ),
-            Expanded(
-              child: Text(
-                title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
-            ),
-            if (!preview)
-              IconButton(
-                tooltip: 'Đăng xuất',
-                icon: const Icon(Icons.logout),
-                onPressed: () async {
-                  try {
-                    await useCases.auth.signOut();
-                  } catch (error) {
-                    if (context.mounted) {
-                      showError(context, error);
-                    }
-                  }
-                },
-              ),
-          ],
-        ),
-      ),
-      Expanded(child: child),
-    ],
   );
 }

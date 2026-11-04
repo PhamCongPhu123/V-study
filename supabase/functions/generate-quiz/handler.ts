@@ -62,6 +62,7 @@ export function createHandler(config?: Config, fetcher: Fetcher = fetch) {
         topic,
         Number(count),
         document,
+        difficulty,
       );
       const result = await backend.rpc<{ quiz_id: string }>("create_generated_quiz", {
         p_owner_id: owner,

@@ -244,6 +244,7 @@ class QuizPlayerPage extends StatefulWidget {
     this.questionIds,
     this.wrongAnswers,
     this.now,
+    this.assistantStyle = false,
   });
   final VstudyUseCases useCases;
   final Quiz quiz;
@@ -251,6 +252,7 @@ class QuizPlayerPage extends StatefulWidget {
   final List<String>? questionIds;
   final List<WrongQuizAnswer>? wrongAnswers;
   final DateTime Function()? now;
+  final bool assistantStyle;
   @override
   State<QuizPlayerPage> createState() => _QuizPlayerPageState();
 }
@@ -261,6 +263,7 @@ class _QuizPlayerPageState extends State<QuizPlayerPage>
   List<QuizQuestion> _questions = [];
   final Map<String, int> _answers = {};
   final Map<String, AnswerReview> _feedback = {};
+  final Set<String> _hints = {};
   final Map<String, String> _questionQuizzes = {};
   final String _attemptId = const Uuid().v4();
   Map<String, int>? _frozenAnswers;
@@ -472,7 +475,9 @@ class _QuizPlayerPageState extends State<QuizPlayerPage>
   Widget build(BuildContext context) => PopScope(
     canPop: !_busy,
     child: Scaffold(
+      backgroundColor: widget.assistantStyle ? const Color(0xFFE1E7F6) : null,
       appBar: AppBar(
+        backgroundColor: widget.assistantStyle ? const Color(0xFFF1DDB7) : null,
         title: Text(
           widget.quiz.title,
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
@@ -574,9 +579,16 @@ class _QuizPlayerPageState extends State<QuizPlayerPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '• Nhận biết',
-                      style: TextStyle(fontSize: 10, color: VstudyColors.muted),
+                    Text(
+                      switch (widget.quiz.difficulty) {
+                        'easy' => '• Nhận biết',
+                        'hard' => '• Vận dụng',
+                        _ => '• Thông hiểu',
+                      },
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: VstudyColors.muted,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -649,6 +661,33 @@ class _QuizPlayerPageState extends State<QuizPlayerPage>
                           ],
                         ),
                       ),
+                    ),
+                  ),
+                ),
+              if (q.hint.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: VstudyColors.paleGold,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextButton.icon(
+                          key: const ValueKey('quiz-hint'),
+                          onPressed: () => setState(() => _hints.add(q.id)),
+                          icon: const Icon(Icons.auto_awesome, size: 16),
+                          label: const Text('Gợi ý'),
+                        ),
+                        if (_hints.contains(q.id))
+                          Text(
+                            q.hint,
+                            style: const TextStyle(fontSize: 12, height: 1.5),
+                          ),
+                      ],
                     ),
                   ),
                 ),

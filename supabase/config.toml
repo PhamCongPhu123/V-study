@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.generate-quiz]
 verify_jwt = false
+
+[functions.study-assistant]
+verify_jwt = false

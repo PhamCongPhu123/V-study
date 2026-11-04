@@ -132,11 +132,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(AiPage), findsOneWidget);
       final conversation = find.text('Cách ôn tập hiệu quả');
-      await tester.scrollUntilVisible(
-        conversation,
-        180,
-        scrollable: find.byType(Scrollable).last,
-      );
+      final aiList = find
+          .descendant(
+            of: find.byKey(const ValueKey('ai-home-list')),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.scrollUntilVisible(conversation, 180, scrollable: aiList);
       await tester.tap(conversation);
       await tester.pumpAndSettle();
       expect(find.text('Làm sao để ôn tập hiệu quả hơn?'), findsOneWidget);
@@ -148,11 +150,7 @@ void main() {
       expect(find.text('Làm sao để ôn tập hiệu quả hơn?'), findsNothing);
 
       final documents = find.text('Quản lý tài liệu PDF/TXT');
-      await tester.scrollUntilVisible(
-        documents,
-        -180,
-        scrollable: find.byType(Scrollable).last,
-      );
+      await tester.scrollUntilVisible(documents, -180, scrollable: aiList);
       await tester.tap(documents);
       await tester.pumpAndSettle();
       expect(find.byType(DocumentsPage), findsOneWidget);

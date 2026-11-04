@@ -93,7 +93,7 @@ export class Backend {
   }
 
   async ownedRow<T>(
-    table: "chat_threads" | "documents" | "subjects" | "quiz_chapters",
+    table: "chat_threads" | "documents" | "subjects" | "quiz_chapters" | "ai_artifacts",
     id: string,
     owner: string,
     fields: string,
@@ -153,13 +153,20 @@ export class Backend {
     return result;
   }
 
-  async documentParts(id: string, owner: string): Promise<GeminiPart[]> {
-    const doc = await this.ownedRow<OwnedDocument>(
+  async documentParts(
+    id: string,
+    owner: string,
+    knownDocument?: OwnedDocument,
+  ): Promise<GeminiPart[]> {
+    const doc = knownDocument ?? await this.ownedRow<OwnedDocument>(
       "documents",
       id,
       owner,
       "id,owner_id,title,storage_path,mime_type,size_bytes",
     );
+    if (doc.id !== id || doc.owner_id !== owner) {
+      throw new HttpError(404, "Không tìm thấy tài liệu thuộc tài khoản này.", "not_found");
+    }
     const max = 10 * 1024 * 1024;
     if (!Number.isSafeInteger(doc.size_bytes) || doc.size_bytes <= 0 || doc.size_bytes > max) {
       throw new HttpError(400, "Tài liệu phải nhỏ hơn hoặc bằng 10 MiB.", "invalid_document");
@@ -263,7 +270,11 @@ export class Backend {
         );
       }
       if (code === "P0409") {
-        throw new HttpError(409, "Hội thoại đang xử lý một tin nhắn khác.", "request_in_progress");
+        throw new HttpError(
+          409,
+          "Yêu cầu AI này đang được xử lý. Vui lòng đợi rồi thử lại.",
+          "request_in_progress",
+        );
       }
       throw new HttpError(503, "Không thể lưu dữ liệu. Vui lòng thử lại.", "database_unavailable");
     }
