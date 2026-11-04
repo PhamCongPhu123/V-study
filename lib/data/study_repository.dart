@@ -77,7 +77,7 @@ class SupabaseStudyRepository extends SupabaseAccess
 
   @override
   Future<List<StudyEvent>> createEvent(EventDraft draft) => protect(() async {
-    ownerId;
+    final owner = ownerId;
     final created = await client.rpc(
       'create_study_event',
       params: {
@@ -86,49 +86,75 @@ class SupabaseStudyRepository extends SupabaseAccess
         'p_repeat_weeks': draft.repeatWeeks,
       },
     );
-    final ids = (created as List)
-        .map((row) => jsonObject(row)['id'] as String)
-        .toList();
-    if (ids.isEmpty) {
+    final baseRows = (created as List).map(jsonObject).toList();
+    if (baseRows.isEmpty) {
       throw const AppException('Chưa tạo được buổi học. Vui lòng thử lại.');
     }
-    final rows = await client
-        .from('study_events')
-        .select('*,event_tasks(*)')
-        .eq('owner_id', ownerId)
-        .inFilter('id', ids)
-        .order('starts_at')
-        .order('id');
-    return rows.map(eventFromJson).toList(growable: false);
+    final createdEvents = baseRows.map(eventFromJson).toList(growable: false);
+    final ids = createdEvents.map((event) => event.id).toList();
+    try {
+      final rows = await client
+          .from('study_events')
+          .select('*,event_tasks(*)')
+          .eq('owner_id', owner)
+          .inFilter('id', ids)
+          .order('starts_at')
+          .order('id');
+      return rows.length == ids.length
+          ? rows.map(eventFromJson).toList(growable: false)
+          : createdEvents;
+    } on Exception {
+      // The RPC already confirmed an atomic commit. A failed checklist read
+      // must not encourage a duplicate creation retry. Reload obtains task IDs.
+      return createdEvents;
+    }
   });
 
   @override
   Future<void> updateEvent(String id, EventDraft draft) => protect(() async {
     // Editing affects one occurrence and preserves task IDs/completion states.
     // Recurrence and taskTitles are creation-only parameters.
-    await client
+    final changed = await client
         .from('study_events')
         .update(eventToJson(draft))
         .eq('id', id)
-        .eq('owner_id', ownerId);
+        .eq('owner_id', ownerId)
+        .select('id');
+    if (changed.isEmpty) {
+      throw const AppException(
+        'Lịch trình không còn tồn tại hoặc bạn không có quyền sửa. Vui lòng tải lại lịch.',
+      );
+    }
   });
 
   @override
   Future<void> deleteEvent(String id) => protect(() async {
-    await client
+    final deleted = await client
         .from('study_events')
         .delete()
         .eq('id', id)
-        .eq('owner_id', ownerId);
+        .eq('owner_id', ownerId)
+        .select('id');
+    if (deleted.isEmpty) {
+      throw const AppException(
+        'Lịch trình không còn tồn tại hoặc bạn không có quyền xóa. Vui lòng tải lại lịch.',
+      );
+    }
   });
 
   @override
   Future<void> setTaskCompleted(String id, bool completed) => protect(() async {
-    await client
+    final changed = await client
         .from('event_tasks')
         .update({'is_completed': completed})
         .eq('id', id)
-        .eq('owner_id', ownerId);
+        .eq('owner_id', ownerId)
+        .select('id');
+    if (changed.isEmpty) {
+      throw const AppException(
+        'Nhiệm vụ không còn tồn tại hoặc bạn không có quyền sửa. Vui lòng tải lại lịch.',
+      );
+    }
   });
 
   @override

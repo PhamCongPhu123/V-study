@@ -8,6 +8,17 @@ Trang chủ và lịch được chỉnh theo ảnh mẫu mới: nền kem/vàng 
 
 Footer chung có thứ tự **Lịch → Quiz → Trang chủ → Thống kê → Tài liệu**; biểu tượng ngôi nhà nằm giữa và mở Trang chủ. AI mở bằng nút tròn vàng hình lấp lánh bên phải, tách khỏi footer. Footer giữ nguyên khi mở quiz, hội thoại hay tài liệu trong từng tab. Chạm lại biểu tượng tab sẽ trở về trang đầu của tab đó. Nút Back Android đóng trang con trước; từ AI trở về tab đã mở trước đó.
 
+## Thêm lịch trình theo các frame mới
+
+Trong tab **Lịch**, chọn **+ Thêm** để mở form toàn trang có nền kem chuyển xanh. Nhập tên lịch, chọn **Môn học / Deadline**, **Trên lớp / Tự học**, ngày, giờ bắt đầu/kết thúc, địa điểm, ghi chú, lặp hằng tuần và thời gian nhắc. Mục mở rộng cho phép liên kết môn học và thêm checklist. Có thể chọn ngày kết thúc riêng cho lịch qua nửa đêm.
+
+- **Xác nhận → Thêm** mới tạo lịch; **Hủy** trong hộp thoại giữ nguyên nội dung. Lưu thành công quay về ngày của lịch vừa tạo.
+- Đóng form hoặc chuyển tab khi có nội dung chưa lưu sẽ hỏi trước khi bỏ nội dung. Nút AI vẫn mở hội thoại; quay lại sẽ tiếp tục form đang nhập.
+- Mở một lịch đã có và chọn **Sửa** để cập nhật hoặc **Xóa lịch trình** để mở hộp xác nhận xóa màu đỏ. Sửa/xóa chỉ tác động buổi được chọn, giữ các buổi khác trong chuỗi và giữ ID/trạng thái checklist khi sửa.
+- Tên trống, khoảng giờ không hợp lệ và số tuần lặp ngoài 1–52 bị chặn trước khi lưu. Khi đang lưu, nút gửi được khóa; nếu lưu lỗi, form giữ nội dung và hiển thị thông báo.
+
+Không cần migration hay Edge Function mới cho thay đổi này. Nhắc trước hiện được lưu cùng lịch, chưa gửi thông báo thiết bị. Bản mẫu không cần đăng nhập và chỉ giữ thay đổi trong phiên; dữ liệu thật dùng Supabase khi bật `LIVE_BACKEND`. Xem [phạm vi kiểm chứng luồng lịch](docs/schedule-editor-verification.md).
+
 ## Quiz theo các frame mới
 
 - Dashboard có tiến độ, mục tiêu theo ngày, bộ lọc Tất cả/Luyện tập/Đã thi/Câu sai, các môn và kết quả gần đây.

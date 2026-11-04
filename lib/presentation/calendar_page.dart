@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../domain/entities.dart';
 import '../domain/use_cases.dart';
 import 'design_system.dart';
+import 'schedule_editor_page.dart';
+import 'schedule_confirmation.dart';
 import 'widgets.dart' show errorMessage;
 
 /// Real local calendar dates; data adapters handle UTC serialization.
@@ -101,8 +103,8 @@ class _CalendarPageState extends State<CalendarPage> {
     final value = await showDatePicker(
       context: context,
       initialDate: _selected,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100, 12, 31),
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2200, 12, 31),
     );
     if (value != null && mounted) {
       _selectDate(value);
@@ -119,18 +121,25 @@ class _CalendarPageState extends State<CalendarPage> {
       if (!mounted) {
         return;
       }
-      final changed = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => _EventEditor(
-          useCases: widget.useCases,
-          subjects: subjects,
-          selectedDay: _selected,
-          existing: event,
+      DateTime? savedDay;
+      final changed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => ScheduleEditorPage(
+            useCases: widget.useCases,
+            subjects: subjects,
+            selectedDay: _selected,
+            existing: event,
+            onSaved: (date) => savedDay = date,
+          ),
         ),
       );
       if (mounted && changed == true) {
-        _refresh();
+        setState(() {
+          if (savedDay != null) {
+            _selected = _day(savedDay!);
+          }
+          _events = _load();
+        });
       }
     } catch (error) {
       _showError(error);
@@ -169,24 +178,13 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   Future<void> _delete(StudyEvent event) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Xóa buổi học?'),
-        content: Text(
-          'Xóa “${event.title}” và checklist của buổi này? Các buổi lặp lại khác vẫn được giữ.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xóa'),
-          ),
-        ],
-      ),
+    final confirmed = await showScheduleConfirmation(
+      context,
+      kind: ScheduleConfirmationKind.delete,
+      title: event.title,
+      details: event.seriesId == null
+          ? 'Lịch này và các việc cần chuẩn bị sẽ được xóa.'
+          : 'Chỉ xóa buổi này và checklist; các buổi khác trong chuỗi vẫn được giữ.',
     );
     if (confirmed == true && mounted) {
       await _runMutation(() => widget.useCases.study.deleteEvent(event.id));
@@ -349,6 +347,7 @@ class _CalendarPageState extends State<CalendarPage> {
                       icon: const Icon(Icons.refresh, size: 19),
                     ),
                   FilledButton.icon(
+                    key: const ValueKey('calendar-add-event'),
                     onPressed: _mutating ? null : _edit,
                     style: FilledButton.styleFrom(
                       backgroundColor: VstudyColors.navy,
@@ -1048,419 +1047,3 @@ String _kindLabel(EventKind kind) => switch (kind) {
   EventKind.selfStudy => 'Lịch ôn tập tự học',
   EventKind.deadline => 'Deadline',
 };
-
-class _EventEditor extends StatefulWidget {
-  const _EventEditor({
-    required this.useCases,
-    required this.subjects,
-    required this.selectedDay,
-    this.existing,
-  });
-
-  final VstudyUseCases useCases;
-  final List<Subject> subjects;
-  final DateTime selectedDay;
-  final StudyEvent? existing;
-
-  @override
-  State<_EventEditor> createState() => _EventEditorState();
-}
-
-class _EventEditorState extends State<_EventEditor> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _title;
-  late final TextEditingController _location;
-  late final TextEditingController _notes;
-  final _tasks = TextEditingController();
-  final _repeat = TextEditingController(text: '0');
-  late DateTime _starts;
-  late DateTime _ends;
-  late EventKind _kind;
-  String? _subjectId;
-  int? _reminder;
-  late List<Subject> _subjects;
-  bool _busy = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    final event = widget.existing;
-    _title = TextEditingController(text: event?.title ?? '');
-    _location = TextEditingController(text: event?.location ?? '');
-    _notes = TextEditingController(text: event?.notes ?? '');
-    _subjects = [...widget.subjects];
-    _subjectId = event?.subjectId;
-    _kind = event?.kind ?? EventKind.selfStudy;
-    _reminder = event?.reminderMinutes;
-    _starts =
-        event?.startsAt.toLocal() ??
-        DateTime(
-          widget.selectedDay.year,
-          widget.selectedDay.month,
-          widget.selectedDay.day,
-          8,
-        );
-    _ends = event?.endsAt.toLocal() ?? _starts.add(const Duration(hours: 1));
-  }
-
-  @override
-  void dispose() {
-    _title.dispose();
-    _location.dispose();
-    _notes.dispose();
-    _tasks.dispose();
-    _repeat.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickTime(bool start) async {
-    final previous = start ? _starts : _ends;
-    final date = await showDatePicker(
-      context: context,
-      initialDate: previous,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100, 12, 31),
-    );
-    if (date == null || !mounted) {
-      return;
-    }
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(previous),
-    );
-    if (time == null || !mounted) {
-      return;
-    }
-    setState(() {
-      final value = DateTime(
-        date.year,
-        date.month,
-        date.day,
-        time.hour,
-        time.minute,
-      );
-      if (start) {
-        final previousDuration = _ends.difference(_starts);
-        _starts = value;
-        _ends = value.add(
-          previousDuration.isNegative || previousDuration == Duration.zero
-              ? const Duration(hours: 1)
-              : previousDuration,
-        );
-      } else {
-        _ends = value;
-      }
-    });
-  }
-
-  Future<void> _addSubject() async {
-    final input = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Thêm môn học'),
-        content: TextField(
-          controller: input,
-          autofocus: true,
-          maxLength: 100,
-          decoration: const InputDecoration(labelText: 'Tên môn học'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, input.text.trim()),
-            child: const Text('Thêm'),
-          ),
-        ],
-      ),
-    );
-    // Dispose after the closing route has completed using the controller.
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    input.dispose();
-    if (name == null || name.isEmpty || !mounted) {
-      return;
-    }
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      final subject = await widget.useCases.createSubject(name);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _subjects.add(subject);
-        _subjectId = subject.id;
-      });
-    } catch (error) {
-      if (mounted) {
-        setState(() => _error = errorMessage(error));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  Future<void> _save() async {
-    if (_busy || !_formKey.currentState!.validate()) {
-      return;
-    }
-    if (!_ends.isAfter(_starts)) {
-      setState(() => _error = 'Giờ kết thúc phải sau giờ bắt đầu.');
-      return;
-    }
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    final draft = EventDraft(
-      title: _title.text.trim(),
-      kind: _kind,
-      startsAt: _starts,
-      endsAt: _ends,
-      subjectId: _subjectId,
-      location: _location.text.trim(),
-      notes: _notes.text.trim(),
-      reminderMinutes: _reminder,
-      repeatWeeks: widget.existing == null ? int.parse(_repeat.text) : 0,
-      taskTitles:
-          widget.existing?.tasks.map((task) => task.title).toList() ??
-          _tasks.text
-              .split('\n')
-              .map((task) => task.trim())
-              .where((task) => task.isNotEmpty)
-              .toList(),
-    );
-    try {
-      final existing = widget.existing;
-      if (existing != null) {
-        await widget.useCases.updateEvent(existing.id, draft);
-      } else {
-        await widget.useCases.createEvent(draft);
-      }
-      if (mounted) {
-        Navigator.pop(context, true);
-      }
-    } catch (error) {
-      if (mounted) {
-        setState(() => _error = errorMessage(error));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final format = DateFormat('dd/MM/yyyy HH:mm');
-    final reminders = <int>{
-      5,
-      15,
-      30,
-      60,
-      120,
-      1440,
-      if (_reminder != null) _reminder!,
-    }.toList()..sort();
-    return PopScope(
-      canPop: !_busy,
-      child: AlertDialog(
-        title: Text(
-          widget.existing == null ? 'Thêm lịch học / deadline' : 'Sửa buổi học',
-        ),
-        content: SizedBox(
-          width: 500,
-          child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (widget.existing?.seriesId != null)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        'Thay đổi chỉ áp dụng cho buổi này trong chuỗi lịch.',
-                      ),
-                    ),
-                  TextFormField(
-                    controller: _title,
-                    enabled: !_busy,
-                    maxLength: 200,
-                    decoration: const InputDecoration(
-                      labelText: 'Tên buổi học / deadline',
-                    ),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Nhập tên lịch.'
-                        : null,
-                  ),
-                  DropdownButtonFormField<EventKind>(
-                    initialValue: _kind,
-                    decoration: const InputDecoration(labelText: 'Loại lịch'),
-                    items: EventKind.values
-                        .map(
-                          (kind) => DropdownMenuItem(
-                            value: kind,
-                            child: Text(_kindLabel(kind)),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _busy
-                        ? null
-                        : (value) => setState(() => _kind = value!),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('subject-$_subjectId-${_subjects.length}'),
-                    initialValue: _subjectId,
-                    decoration: const InputDecoration(labelText: 'Môn học'),
-                    isExpanded: true,
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('Không chọn'),
-                      ),
-                      ..._subjects.map(
-                        (subject) => DropdownMenuItem(
-                          value: subject.id,
-                          child: Text(subject.name),
-                        ),
-                      ),
-                    ],
-                    onChanged: _busy
-                        ? null
-                        : (value) => setState(() => _subjectId = value),
-                  ),
-                  TextButton.icon(
-                    onPressed: _busy ? null : _addSubject,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Thêm môn học'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : () => _pickTime(true),
-                    icon: const Icon(Icons.event),
-                    label: Text('Bắt đầu: ${format.format(_starts)}'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : () => _pickTime(false),
-                    icon: const Icon(Icons.schedule),
-                    label: Text('Kết thúc: ${format.format(_ends)}'),
-                  ),
-                  TextFormField(
-                    controller: _location,
-                    enabled: !_busy,
-                    maxLength: 300,
-                    decoration: const InputDecoration(
-                      labelText: 'Địa điểm / phòng học',
-                    ),
-                  ),
-                  TextFormField(
-                    controller: _notes,
-                    enabled: !_busy,
-                    maxLines: 3,
-                    maxLength: 5000,
-                    decoration: const InputDecoration(labelText: 'Ghi chú'),
-                  ),
-                  DropdownButtonFormField<int>(
-                    initialValue: _reminder,
-                    decoration: const InputDecoration(labelText: 'Nhắc trước'),
-                    items: [
-                      const DropdownMenuItem<int>(
-                        value: null,
-                        child: Text('Không nhắc'),
-                      ),
-                      ...reminders.map(
-                        (minutes) => DropdownMenuItem(
-                          value: minutes,
-                          child: Text('$minutes phút'),
-                        ),
-                      ),
-                    ],
-                    onChanged: _busy
-                        ? null
-                        : (value) => setState(() => _reminder = value),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'Thời gian nhắc được lưu. Phiên bản này chưa gửi thông báo trên thiết bị.',
-                    ),
-                  ),
-                  if (widget.existing == null) ...[
-                    TextFormField(
-                      controller: _repeat,
-                      enabled: !_busy,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Số tuần lặp thêm (0 = không lặp)',
-                        helperText:
-                            'Tối đa 52 tuần; tạo lịch cùng giờ mỗi tuần.',
-                      ),
-                      validator: (value) {
-                        final weeks = int.tryParse(value ?? '');
-                        return weeks == null || weeks < 0 || weeks > 52
-                            ? 'Nhập số tuần từ 0 đến 52.'
-                            : null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _tasks,
-                      enabled: !_busy,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        labelText: 'Việc cần chuẩn bị',
-                        hintText: 'Mỗi dòng một việc',
-                      ),
-                    ),
-                  ] else if (widget.existing!.tasks.isNotEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 12),
-                      child: Text(
-                        'Checklist được giữ nguyên. Đánh dấu hoàn thành trong chi tiết lịch.',
-                      ),
-                    ),
-                  if (_error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        _error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    ),
-                  if (_busy)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 12),
-                      child: LinearProgressIndicator(),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _busy ? null : () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
-            onPressed: _busy ? null : _save,
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
-}

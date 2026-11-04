@@ -8,6 +8,7 @@ import 'home_page.dart';
 import 'quiz_page.dart';
 import 'quiz_ai_launcher.dart';
 import 'statistics_page.dart';
+import 'schedule_exit_scope.dart';
 import 'widgets.dart';
 
 /// A navigator per tab keeps the footer visible even on pushed feature screens.
@@ -27,8 +28,33 @@ class _VstudyShellState extends State<VstudyShell> {
   int _index = 2;
   int _footerIndex = 2;
   String? _aiPrompt;
+  ScheduleLeaveHandler? _scheduleLeave;
+  bool _switchingTab = false;
 
-  void _select(int index) {
+  Future<void> _select(int index) async {
+    if (_switchingTab) {
+      return;
+    }
+    final leave = _scheduleLeave;
+    if (leave != null) {
+      _switchingTab = true;
+      try {
+        if (!await leave() || !mounted) {
+          return;
+        }
+        _scheduleLeave = null;
+      } catch (error) {
+        if (mounted) {
+          showError(context, error);
+        }
+        return;
+      } finally {
+        _switchingTab = false;
+      }
+    }
+    if (!mounted) {
+      return;
+    }
     final repeat = _index == index;
     _navigators[index].currentState?.popUntil((route) => route.isFirst);
     // Re-entering home/stats/docs reloads data written in other tabs. Calendar
@@ -111,58 +137,68 @@ class _VstudyShellState extends State<VstudyShell> {
   }
 
   @override
-  Widget build(BuildContext context) => QuizAiLauncher(
-    onOpen: _openAi,
-    child: PopScope<Object?>(
-      canPop: _index == 2 && !_canHandleBack[_index],
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
-          return;
+  Widget build(BuildContext context) => ScheduleExitScope(
+    attach: (handler) {
+      _scheduleLeave = handler;
+      return () {
+        if (_scheduleLeave == handler) {
+          _scheduleLeave = null;
         }
-        if (_canHandleBack[_index]) {
-          _navigators[_index].currentState?.maybePop(result);
-        } else if (_index == 5) {
-          _closeAi();
-        } else if (_index != 2) {
-          _select(2);
-        }
-      },
-      child: Scaffold(
-        body: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: _footerIndex == 3
-                ? const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFF1DDB7),
-                      Color(0xFFF9F6EF),
-                      Color(0xFFE0E7F6),
-                    ],
-                    stops: [0, .40, 1],
-                  )
-                : VstudyColors.background,
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: IndexedStack(
-              index: _index,
-              children: List.generate(6, _tab),
+      };
+    },
+    child: QuizAiLauncher(
+      onOpen: _openAi,
+      child: PopScope<Object?>(
+        canPop: _index == 2 && !_canHandleBack[_index],
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) {
+            return;
+          }
+          if (_canHandleBack[_index]) {
+            _navigators[_index].currentState?.maybePop(result);
+          } else if (_index == 5) {
+            _closeAi();
+          } else if (_index != 2) {
+            _select(2);
+          }
+        },
+        child: Scaffold(
+          body: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: _footerIndex == 3
+                  ? const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFF1DDB7),
+                        Color(0xFFF9F6EF),
+                        Color(0xFFE0E7F6),
+                      ],
+                      stops: [0, .40, 1],
+                    )
+                  : VstudyColors.background,
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: IndexedStack(
+                index: _index,
+                children: List.generate(6, _tab),
+              ),
             ),
           ),
+          bottomNavigationBar: VstudyFooter(
+            selectedIndex: _footerIndex,
+            onSelected: _select,
+          ),
+          floatingActionButton: _index != 5
+              ? FloatingActionButton.small(
+                  key: const ValueKey('open-ai'),
+                  tooltip: 'Hỏi trợ lý V-study',
+                  onPressed: () => _openAi(null),
+                  child: const Icon(Icons.auto_awesome),
+                )
+              : null,
         ),
-        bottomNavigationBar: VstudyFooter(
-          selectedIndex: _footerIndex,
-          onSelected: _select,
-        ),
-        floatingActionButton: _index != 5
-            ? FloatingActionButton.small(
-                key: const ValueKey('open-ai'),
-                tooltip: 'Hỏi trợ lý V-study',
-                onPressed: () => _openAi(null),
-                child: const Icon(Icons.auto_awesome),
-              )
-            : null,
       ),
     ),
   );
