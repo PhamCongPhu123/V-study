@@ -42,7 +42,7 @@ void main() {
     }
   }
 
-  testWidgets('default app entrypoint opens prototype without backend keys', (
+  testWidgets('default app entrypoint requires live backend configuration', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(402, 874);
@@ -51,9 +51,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await entrypoint.main();
     await tester.pumpAndSettle();
-    expect(find.byType(HomePage), findsOneWidget);
-    expect(find.text('Đăng nhập'), findsNothing);
-    expectFooterVisible(tester);
+    expect(find.byType(HomePage), findsNothing);
+    expect(find.textContaining('Thiếu cấu hình Supabase'), findsOneWidget);
+    expect(find.byKey(const ValueKey('footer-home')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

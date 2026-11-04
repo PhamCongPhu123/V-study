@@ -8,10 +8,10 @@ Mở đúng thư mục có `pubspec.yaml` và `lib/main.dart`, cập nhật nhá
 git switch android-working
 git pull --ff-only origin android-working
 flutter pub get
-flutter run -d ID_THIET_BI
+flutter run -d ID_THIET_BI --dart-define=LIVE_BACKEND=false
 ```
 
-Mặc định thấy form Đăng nhập. Chọn **Đăng ký** để xem form Tạo tài khoản, mở Điều khoản/Chính sách bảo mật hoặc thử kiểm tra nhập liệu và nút hiện mật khẩu. Bản xem thử hiển thị nhãn riêng, không gửi thông tin đến Supabase, không đăng ký hay xác minh tài khoản. Nút **Xem thử ứng dụng** mở dữ liệu mẫu. Để vào thẳng Trang chủ minh họa, thêm `--dart-define=SKIP_AUTH_PREVIEW=true`.
+Ứng dụng mặc định dùng Supabase thật. Lệnh trên chủ động bật bản xem thử và hiển thị form Đăng nhập. Chọn **Đăng ký** để xem form Tạo tài khoản, mở Điều khoản/Chính sách bảo mật hoặc thử kiểm tra nhập liệu và nút hiện mật khẩu. Bản xem thử hiển thị nhãn riêng, không gửi thông tin đến Supabase, không đăng ký hay xác minh tài khoản. Nút **Xem thử ứng dụng** mở dữ liệu mẫu. Để vào thẳng Trang chủ minh họa, thêm `--dart-define=SKIP_AUTH_PREVIEW=true`.
 
 ## Kết nối Supabase thật
 

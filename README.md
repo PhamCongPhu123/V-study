@@ -14,7 +14,7 @@ Footer chung có thứ tự **Lịch → Quiz → Trang chủ → Thống kê �
 
 Lần chạy mặc định mở giao diện **Đăng nhập** với nền kem chuyển xanh, thẻ trắng, email/mật khẩu, nút hiện/ẩn mật khẩu, quên mật khẩu và Google. Chọn **Đăng ký** để mở form họ tên, email, mật khẩu, nhập lại mật khẩu và đồng ý Điều khoản/Chính sách bảo mật. Nút gửi chỉ bật khi dữ liệu hợp lệ; lỗi giữ lại nội dung để sửa, thao tác đang gửi được khóa chống gửi lặp.
 
-Trong bản xem thử, các nút xác thực thật được tắt. Nhấn **Xem thử ứng dụng** để vào Trang chủ với dữ liệu minh họa. Có thể chạy với `--dart-define=SKIP_AUTH_PREVIEW=true` để vào thẳng bản mẫu như trước.
+Ứng dụng mặc định dùng Supabase thật; cần cấu hình URL và publishable/anon key qua `--dart-define-from-file=config/dev.json`. Chỉ khi chủ động đặt `--dart-define=LIVE_BACKEND=false` mới mở bản xem thử. Trong bản xem thử, các nút xác thực thật được tắt. Nhấn **Xem thử ứng dụng** để vào Trang chủ với dữ liệu minh họa. Để vào thẳng Trang chủ mẫu, dùng cả `--dart-define=LIVE_BACKEND=false --dart-define=SKIP_AUTH_PREVIEW=true`.
 
 Khi bật `LIVE_BACKEND=true`, Supabase xử lý đăng nhập, đăng ký, xác nhận/gửi lại email, Google OAuth và đặt lại mật khẩu. Chỉ phiên đăng nhập hợp lệ mới mở Trang chủ; đăng ký đang chờ xác nhận email không mở dữ liệu cá nhân. Callback PKCE được xử lý chung lúc khởi động và khi ứng dụng đang mở; Android/iOS đã có cấu hình URI. Không cần migration hoặc Edge Function mới cho thay đổi xác thực này. Xem [cấu hình Email Auth, Google và cách kiểm tra](docs/auth-upgrade.md).
 
@@ -81,13 +81,13 @@ Tab biểu đồ mở menu gồm **Thống kê học tập, Tập trung, Quiz, T
 
 Bản mẫu mặc định có lịch sử minh họa sáu tháng để xem đủ biểu đồ, không cần SQL hoặc đăng nhập. Các thay đổi mẫu chỉ giữ trong phiên. Với backend thật, áp dụng thêm `supabase/migrations/202611030003_statistics.sql` **sau** hai migration trước; không cần deploy lại Edge Function cho phần thống kê. Xem [nâng cấp backend Thống kê](docs/statistics-backend-upgrade.md) và [phạm vi kiểm chứng](docs/statistics-verification.md).
 
-Mặc định mở giao diện đăng nhập ở chế độ xem thử, không cần khóa Supabase. Nhấn **Xem thử ứng dụng** để vào bản mẫu không cần tài khoản. Dữ liệu minh họa chỉ lưu trong phiên chạy; phần chat/quiz mô phỏng được ghi rõ là minh họa.
+Mặc định mở đăng nhập Supabase thật. Thiếu cấu hình thì hiển thị thông báo cấu hình, không tự chuyển sang dữ liệu mẫu. Muốn xem thử, chủ động chạy với `--dart-define=LIVE_BACKEND=false` rồi nhấn **Xem thử ứng dụng**. Dữ liệu minh họa chỉ lưu trong phiên chạy; phần chat/quiz mô phỏng được ghi rõ là minh họa.
 
 Để chạy trong Android Studio: chọn `lib/main.dart`, chọn thiết bị Android và bấm Run. Hoặc dùng Terminal:
 
 ```sh
 flutter pub get
-flutter run -d ID_THIET_BI
+flutter run -d ID_THIET_BI --dart-define-from-file=config/dev.json
 ```
 
 Nhánh này đã có runner Android/iOS/web do người dùng thêm, không cần tạo lại. Muốn dùng backend thật và xác thực, chạy với `--dart-define=LIVE_BACKEND=true --dart-define-from-file=config/dev.json`.

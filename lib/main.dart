@@ -17,7 +17,7 @@ import 'presentation/app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  const liveBackend = bool.fromEnvironment('LIVE_BACKEND', defaultValue: false);
+  const liveBackend = bool.fromEnvironment('LIVE_BACKEND', defaultValue: true);
   if (!liveBackend) {
     final preview = PreviewRepository(documentFiles: createDocumentFiles());
     const skipAuthPreview = bool.fromEnvironment(
@@ -140,7 +140,7 @@ class _ConfigurationApp extends StatelessWidget {
             child: Text(
               failed
                   ? 'Không khởi tạo được kết nối Vstudy. Vui lòng kiểm tra cấu hình và khởi động lại.'
-                  : 'Vstudy chưa được kết nối với máy chủ. Vui lòng liên hệ người quản trị ứng dụng.',
+                  : 'Thiếu cấu hình Supabase. Hãy chạy hoặc build ứng dụng với --dart-define-from-file=config/dev.json đã điền URL và khóa công khai của dự án.',
             ),
           ),
         ),
