@@ -169,6 +169,8 @@ StudyDocument documentFromJson(Map<String, dynamic> row) => StudyDocument(
   mimeType: row['mime_type'] as String,
   sizeBytes: row['size_bytes'] as int,
   createdAt: localTimestamp(row['created_at']),
+  subjectId: row['subject_id'] as String?,
+  isFavorite: row['is_favorite'] as bool? ?? false,
 );
 
 Quiz quizFromJson(Map<String, dynamic> row) => Quiz(

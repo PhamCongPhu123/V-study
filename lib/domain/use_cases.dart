@@ -6,6 +6,7 @@ import 'account_repository.dart';
 import 'ai_workspace.dart';
 import 'auth_validation.dart';
 import 'entities.dart';
+import 'document_files.dart';
 import 'repositories.dart';
 
 /// Domain operations depend on repository contracts, never on Flutter/Supabase.
@@ -19,6 +20,7 @@ class VstudyUseCases {
     this.analytics,
     this.account,
     this.aiWorkspace,
+    this.documentFiles,
   });
   final AuthRepository auth;
   final StudyRepository study;
@@ -28,6 +30,7 @@ class VstudyUseCases {
   final AnalyticsRepository? analytics;
   final AccountRepository? account;
   final AiWorkspaceRepository? aiWorkspace;
+  final DocumentFiles? documentFiles;
 
   Future<AiArtifact> createAiMaterial(AiMaterialRequest request) {
     final workspace = aiWorkspace;

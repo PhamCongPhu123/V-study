@@ -16,6 +16,48 @@ class SupabaseDocumentRepository extends SupabaseAccess
   static const maxBytes = 10 * 1024 * 1024;
 
   @override
+  Future<Uint8List> readDocument(StudyDocument document) => protect(() async {
+    final row = await client
+        .from('documents')
+        .select()
+        .eq('id', document.id)
+        .eq('owner_id', ownerId)
+        .single();
+    final current = documentFromJson(row);
+    final path = current.storagePath;
+    if (!path.startsWith('$ownerId/${current.id}/') ||
+        path.split('/').length != 3 ||
+        current.sizeBytes > maxBytes) {
+      throw const AppException('Tài liệu không có đường dẫn hợp lệ.');
+    }
+    final bytes = await client.storage.from(_bucket).download(path);
+    if (bytes.isEmpty ||
+        bytes.length > maxBytes ||
+        bytes.length != current.sizeBytes) {
+      throw const AppException(
+        'Nội dung tài liệu không khớp hoặc vượt quá 10 MiB.',
+      );
+    }
+    return bytes;
+  });
+
+  @override
+  Future<StudyDocument> updateLibraryDetails(
+    String id, {
+    String? subjectId,
+    required bool isFavorite,
+  }) => protect(() async {
+    final row = await client
+        .from('documents')
+        .update({'subject_id': subjectId, 'is_favorite': isFavorite})
+        .eq('id', id)
+        .eq('owner_id', ownerId)
+        .select()
+        .single();
+    return documentFromJson(row);
+  });
+
+  @override
   Future<List<StudyDocument>> listDocuments() => protect(() async {
     final owner = ownerId;
     final rows = await loadPages(

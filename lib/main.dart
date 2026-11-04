@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'data/auth_repository.dart';
 import 'data/auth_callback_coordinator.dart';
+import 'data/document_files.dart';
 import 'data/study_repository.dart';
 import 'data/document_repository.dart';
 import 'data/quiz_repository.dart';
@@ -18,7 +19,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const liveBackend = bool.fromEnvironment('LIVE_BACKEND', defaultValue: false);
   if (!liveBackend) {
-    final preview = PreviewRepository();
+    final preview = PreviewRepository(documentFiles: createDocumentFiles());
     const skipAuthPreview = bool.fromEnvironment(
       'SKIP_AUTH_PREVIEW',
       defaultValue: false,
@@ -85,6 +86,7 @@ Future<void> main() async {
             analytics: SupabaseAnalyticsRepository(client),
             account: SupabaseAccountRepository(client),
             aiWorkspace: SupabaseAiWorkspaceRepository(client),
+            documentFiles: createDocumentFiles(),
           ),
         ),
       ),

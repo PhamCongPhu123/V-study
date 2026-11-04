@@ -108,7 +108,7 @@ class _VstudyShellState extends State<VstudyShell> {
       onPreviewSignOut: widget.onPreviewSignOut,
     ),
     3 => StatisticsPage(useCases: widget.useCases),
-    4 => DocumentsPage(useCases: widget.useCases),
+    4 => DocumentsPage(useCases: widget.useCases, preview: widget.preview),
     _ => AiPage(
       useCases: widget.useCases,
       initialPrompt: _aiPrompt,

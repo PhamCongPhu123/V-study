@@ -49,6 +49,12 @@ abstract interface class StudyRepository {
 
 abstract interface class DocumentRepository {
   Future<List<StudyDocument>> listDocuments();
+  Future<Uint8List> readDocument(StudyDocument document);
+  Future<StudyDocument> updateLibraryDetails(
+    String id, {
+    String? subjectId,
+    required bool isFavorite,
+  });
   Future<StudyDocument> upload({
     required String title,
     required String filename,

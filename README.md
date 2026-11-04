@@ -18,6 +18,12 @@ Trong bản xem thử, các nút xác thực thật được tắt. Nhấn **Xem
 
 Khi bật `LIVE_BACKEND=true`, Supabase xử lý đăng nhập, đăng ký, xác nhận/gửi lại email, Google OAuth và đặt lại mật khẩu. Chỉ phiên đăng nhập hợp lệ mới mở Trang chủ; đăng ký đang chờ xác nhận email không mở dữ liệu cá nhân. Callback PKCE được xử lý chung lúc khởi động và khi ứng dụng đang mở; Android/iOS đã có cấu hình URI. Không cần migration hoặc Edge Function mới cho thay đổi xác thực này. Xem [cấu hình Email Auth, Google và cách kiểm tra](docs/auth-upgrade.md).
 
+## Thư viện tài liệu theo thiết kế mới
+
+Tab **Tài liệu** có tìm kiếm, lọc môn/yêu thích, danh sách đã tải trên thiết bị, xem PDF/TXT, phân môn và tải lên/xóa. PDF đọc ngay trong app Android/iOS; tải xuống dùng hộp lưu tệp thật, có tùy chọn bản đọc ngoại tuyến. Từ trang xem có thể hỏi đáp Vstudy Ai, tạo tóm tắt và xuất bản tóm tắt TXT.
+
+Backend thật cần chạy thêm `supabase/migrations/202611040003_document_library.sql` sau các migration trước. Chạy `flutter pub get`, Stop rồi Run lại để cài plugin đọc PDF/lưu ngoại tuyến. Không cần deploy Edge Function mới cho thư viện. Xem [hướng dẫn nâng cấp Tài liệu và kiểm chứng](docs/document-library-upgrade.md).
+
 ## Trợ lý AI theo các frame mới
 
 Nhấn nút vàng lấp lánh để mở trang công cụ AI với nền kem chuyển xanh, thẻ giới thiệu navy, **Tóm tắt / Hỏi đáp / Tạo đề ôn**, hội thoại gần đây và nội dung đã tạo. Lộ trình và flashcard vẫn có ở các lối tắt bên dưới. Có thể gửi câu hỏi ngay từ ô nhập ở trang công cụ.

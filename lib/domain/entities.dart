@@ -177,6 +177,8 @@ class StudyDocument {
     required this.mimeType,
     required this.sizeBytes,
     required this.createdAt,
+    this.subjectId,
+    this.isFavorite = false,
   });
   final String id;
   final String title;
@@ -184,6 +186,20 @@ class StudyDocument {
   final String mimeType;
   final int sizeBytes;
   final DateTime createdAt;
+  final String? subjectId;
+  final bool isFavorite;
+
+  StudyDocument withLibraryDetails({String? subjectId, bool? isFavorite}) =>
+      StudyDocument(
+        id: id,
+        title: title,
+        storagePath: storagePath,
+        mimeType: mimeType,
+        sizeBytes: sizeBytes,
+        createdAt: createdAt,
+        subjectId: subjectId,
+        isFavorite: isFavorite ?? this.isFavorite,
+      );
 }
 
 class Quiz {

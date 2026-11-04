@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'dart:collection';
 
 import '../core/app_exception.dart';
@@ -10,6 +11,8 @@ import '../domain/entities.dart';
 import '../domain/repositories.dart';
 import '../domain/study_metrics.dart';
 import '../domain/use_cases.dart';
+import '../domain/document_files.dart';
+import 'memory_document_files.dart';
 
 /// In-memory prototype data. Never initializes Supabase or calls Gemini.
 class PreviewRepository
@@ -21,7 +24,9 @@ class PreviewRepository
         AnalyticsRepository,
         AccountRepository,
         AiWorkspaceRepository {
-  PreviewRepository({DateTime? now}) : _now = now ?? DateTime.now() {
+  PreviewRepository({DateTime? now, DocumentFiles? documentFiles})
+    : _now = now ?? DateTime.now(),
+      _documentFiles = documentFiles ?? MemoryDocumentFiles() {
     final today = localDay(_now);
     _events.addAll([
       StudyEvent(
@@ -171,9 +176,32 @@ class PreviewRepository
         createdAt: _now.subtract(const Duration(minutes: 10)),
       ),
     ];
+    for (var i = 0; i < _documents.length; i++) {
+      final doc = _documents[i];
+      final bytes = doc.mimeType == 'application/pdf'
+          ? _samplePdf()
+          : Uint8List.fromList(
+              utf8.encode(
+                'Vstudy · Tài liệu minh họa\n\nWireframe mô tả cấu trúc màn hình.\nHãy chia nội dung thành từng phần, tự kiểm tra và ôn lại theo lịch.',
+              ),
+            );
+      _documentBytes[doc.id] = bytes;
+      _documents[i] = StudyDocument(
+        id: doc.id,
+        title: doc.title,
+        storagePath: doc.storagePath,
+        mimeType: doc.mimeType,
+        sizeBytes: bytes.length,
+        createdAt: doc.createdAt,
+        subjectId: doc.mimeType == 'application/pdf' ? 'math' : 'design',
+        isFavorite: i == 0,
+      );
+    }
   }
 
   final DateTime _now;
+  final DocumentFiles _documentFiles;
+  final _documentBytes = <String, Uint8List>{};
   var _sequence = 0;
   DateTime? _lastAnsweredAt;
   DateTime _answeredNow() {
@@ -238,6 +266,7 @@ class PreviewRepository
     analytics: this,
     account: this,
     aiWorkspace: this,
+    documentFiles: _documentFiles,
   );
 
   static const _demoSummary = AiSummary(
@@ -795,6 +824,35 @@ class PreviewRepository
   Future<List<StudyDocument>> listDocuments() async =>
       List.unmodifiable(_documents);
   @override
+  Future<Uint8List> readDocument(StudyDocument document) async {
+    final bytes = _documentBytes[document.id];
+    if (bytes == null) {
+      throw const AppException('Tài liệu không còn trong thư viện.');
+    }
+    return Uint8List.fromList(bytes);
+  }
+
+  @override
+  Future<StudyDocument> updateLibraryDetails(
+    String id, {
+    String? subjectId,
+    required bool isFavorite,
+  }) async {
+    final index = _documents.indexWhere((doc) => doc.id == id);
+    if (index < 0) {
+      throw const AppException('Không tìm thấy tài liệu.');
+    }
+    if (subjectId != null &&
+        !(await listSubjects()).any((s) => s.id == subjectId)) {
+      throw const AppException('Không tìm thấy môn học.');
+    }
+    return _documents[index] = _documents[index].withLibraryDetails(
+      subjectId: subjectId,
+      isFavorite: isFavorite,
+    );
+  }
+
+  @override
   Future<StudyDocument> upload({
     required String title,
     required String filename,
@@ -810,6 +868,7 @@ class PreviewRepository
       createdAt: DateTime.now(),
     );
     _documents.insert(0, doc);
+    _documentBytes[doc.id] = Uint8List.fromList(bytes);
     return doc;
   }
 
@@ -820,6 +879,7 @@ class PreviewRepository
       throw const AppException('Tài liệu đang được dùng trong bản mẫu.');
     }
     _documents.removeWhere((d) => d.id == document.id);
+    _documentBytes.remove(document.id);
   }
 
   static const _sampleQuestions = [
@@ -1590,4 +1650,32 @@ class _PreviewAuth implements AuthRepository {
   Future<void> resendConfirmation(String email) async => _unsupported();
   @override
   Future<void> updatePassword(String password) async => _unsupported();
+}
+
+Uint8List _samplePdf() {
+  // A real, small PDF for the prototype viewer; no remote textbook is implied.
+  const stream =
+      'BT /F1 22 Tf 45 740 Td (Vstudy - sample document) Tj 0 -40 Td /F1 13 Tf (Study notes: read, practise, review.) Tj 0 -25 Td (This PDF is only a UI demonstration.) Tj ET';
+  final objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    '<< /Length ${stream.length} >>\nstream\n$stream\nendstream',
+  ];
+  final buffer = StringBuffer('%PDF-1.4\n');
+  final offsets = <int>[0];
+  for (var i = 0; i < objects.length; i++) {
+    offsets.add(buffer.length);
+    buffer.write('${i + 1} 0 obj\n${objects[i]}\nendobj\n');
+  }
+  final xref = buffer.length;
+  buffer.write('xref\n0 ${objects.length + 1}\n0000000000 65535 f \n');
+  for (final offset in offsets.skip(1)) {
+    buffer.write('${offset.toString().padLeft(10, '0')} 00000 n \n');
+  }
+  buffer.write(
+    'trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n$xref\n%%EOF\n',
+  );
+  return Uint8List.fromList(ascii.encode(buffer.toString()));
 }

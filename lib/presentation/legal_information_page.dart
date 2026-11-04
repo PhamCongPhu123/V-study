@@ -36,6 +36,7 @@ class LegalInformationPage extends StatelessWidget {
                             'Sử dụng AI\nKhi bạn chọn tài liệu và gửi câu hỏi hoặc tạo nội dung, phần nội dung đã chọn được chuyển đến Vstudy Ai để xử lý. Hãy chỉ dùng tài liệu bạn có quyền sử dụng.',
                             'Bản xem thử\nDữ liệu trong bản mẫu là minh họa và chỉ giữ trong phiên chạy. Bản mẫu không đăng ký tài khoản, không gửi email và không gọi Vstudy Ai.',
                             'Quản lý tài khoản\nBạn có thể sửa hồ sơ, xóa các tài liệu/hội thoại có chức năng xóa và đăng xuất. Đăng xuất không xóa dữ liệu đã lưu trên máy chủ.',
+                            'Tài liệu trên thiết bị\nKhi tải xuống, bạn chọn nơi lưu tệp và có thể lưu thêm bản đọc ngoại tuyến trong ứng dụng. Bản trong ứng dụng được chia theo tài khoản; đăng xuất không xóa bản tải. Xóa bản tải trong ứng dụng không xóa tệp đã xuất sang thư mục khác.',
                           ]
                         : const [
                             'Mục đích sử dụng\nVstudy hỗ trợ tổ chức việc học, ôn tập và hỏi đáp kiến thức. Hãy cung cấp email bạn có quyền sử dụng và giữ bí mật thông tin đăng nhập.',

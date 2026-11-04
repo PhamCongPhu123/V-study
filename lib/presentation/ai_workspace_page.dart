@@ -421,7 +421,10 @@ class _AiPageState extends State<AiPage> {
                   onPressed: _locked
                       ? null
                       : () => _route<void>(
-                          () => DocumentsPage(useCases: widget.useCases),
+                          () => DocumentsPage(
+                            useCases: widget.useCases,
+                            preview: widget.preview,
+                          ),
                         ),
                   icon: const Icon(Icons.folder_open_outlined, size: 16),
                   label: const Text(

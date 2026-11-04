@@ -239,8 +239,10 @@ class _AiDocumentLibraryPageState extends State<AiDocumentLibraryPage> {
                       : () async {
                           await Navigator.of(context).push<void>(
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  DocumentsPage(useCases: widget.useCases),
+                              builder: (_) => DocumentsPage(
+                                useCases: widget.useCases,
+                                preview: widget.preview,
+                              ),
                             ),
                           );
                           if (mounted) {
