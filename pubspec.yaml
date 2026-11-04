@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   supabase_flutter: ^2.10.0
+  app_links: '>=6.4.0 <8.0.0'
   file_picker: ^10.3.3
   uuid: ^4.5.1
   intl: ^0.20.2

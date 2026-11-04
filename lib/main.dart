@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'data/auth_repository.dart';
+import 'data/auth_callback_coordinator.dart';
 import 'data/study_repository.dart';
 import 'data/document_repository.dart';
 import 'data/quiz_repository.dart';
@@ -17,7 +19,17 @@ Future<void> main() async {
   const liveBackend = bool.fromEnvironment('LIVE_BACKEND', defaultValue: false);
   if (!liveBackend) {
     final preview = PreviewRepository();
-    runApp(VstudyApp(useCases: preview.useCases, preview: true));
+    const skipAuthPreview = bool.fromEnvironment(
+      'SKIP_AUTH_PREVIEW',
+      defaultValue: false,
+    );
+    runApp(
+      VstudyApp(
+        useCases: preview.useCases,
+        preview: true,
+        showAuthPreview: !skipAuthPreview,
+      ),
+    );
     return;
   }
   const url = String.fromEnvironment('SUPABASE_URL');
@@ -27,33 +39,90 @@ Future<void> main() async {
     defaultValue: 'io.vstudy.app://login-callback/',
   );
   final uri = Uri.tryParse(url);
+  final callback = Uri.tryParse(redirect);
   if (uri == null ||
       !uri.hasAuthority ||
+      uri.host.isEmpty ||
+      uri.userInfo.isNotEmpty ||
       !['https', 'http'].contains(uri.scheme) ||
+      callback == null ||
+      !callback.hasScheme ||
+      !callback.hasAuthority ||
+      callback.host.isEmpty ||
+      callback.userInfo.isNotEmpty ||
+      callback.hasQuery ||
+      callback.hasFragment ||
       key.isEmpty) {
     runApp(const _ConfigurationApp());
     return;
   }
   try {
-    await Supabase.initialize(url: url, anonKey: key);
+    await Supabase.initialize(
+      url: url,
+      anonKey: key,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+        detectSessionInUri: false,
+      ),
+    );
     final client = Supabase.instance.client;
+    final auth = SupabaseAuthRepository(client, redirectUrl: redirect);
+    final callbacks = AuthCallbackCoordinator(
+      auth: auth,
+      redirectUrl: redirect,
+    );
     runApp(
-      VstudyApp(
-        useCases: VstudyUseCases(
-          auth: SupabaseAuthRepository(client, redirectUrl: redirect),
-          study: SupabaseStudyRepository(client),
-          documents: SupabaseDocumentRepository(client),
-          quizzes: SupabaseQuizRepository(client),
-          assistant: SupabaseAssistantRepository(client),
-          analytics: SupabaseAnalyticsRepository(client),
-          account: SupabaseAccountRepository(client),
-          aiWorkspace: SupabaseAiWorkspaceRepository(client),
+      _AuthRuntime(
+        auth: auth,
+        callbacks: callbacks,
+        child: VstudyApp(
+          useCases: VstudyUseCases(
+            auth: auth,
+            study: SupabaseStudyRepository(client),
+            documents: SupabaseDocumentRepository(client),
+            quizzes: SupabaseQuizRepository(client),
+            assistant: SupabaseAssistantRepository(client),
+            analytics: SupabaseAnalyticsRepository(client),
+            account: SupabaseAccountRepository(client),
+            aiWorkspace: SupabaseAiWorkspaceRepository(client),
+          ),
         ),
       ),
     );
   } catch (_) {
     runApp(const _ConfigurationApp(failed: true));
   }
+}
+
+class _AuthRuntime extends StatefulWidget {
+  const _AuthRuntime({
+    required this.auth,
+    required this.callbacks,
+    required this.child,
+  });
+  final SupabaseAuthRepository auth;
+  final AuthCallbackCoordinator callbacks;
+  final Widget child;
+  @override
+  State<_AuthRuntime> createState() => _AuthRuntimeState();
+}
+
+class _AuthRuntimeState extends State<_AuthRuntime> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(widget.callbacks.start());
+  }
+
+  @override
+  void dispose() {
+    unawaited(widget.callbacks.dispose());
+    unawaited(widget.auth.dispose());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _ConfigurationApp extends StatelessWidget {

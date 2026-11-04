@@ -1587,5 +1587,7 @@ class _PreviewAuth implements AuthRepository {
   @override
   Future<void> requestPasswordReset(String email) async => _unsupported();
   @override
+  Future<void> resendConfirmation(String email) async => _unsupported();
+  @override
   Future<void> updatePassword(String password) async => _unsupported();
 }

@@ -8,6 +8,14 @@ Trang chủ và lịch được chỉnh theo ảnh mẫu mới: nền kem/vàng 
 
 Footer chung có thứ tự **Lịch → Quiz → Trang chủ → Thống kê → Tài liệu**; biểu tượng ngôi nhà nằm giữa và mở Trang chủ. AI mở bằng nút tròn vàng hình lấp lánh bên phải, tách khỏi footer. Footer giữ nguyên khi mở quiz, hội thoại hay tài liệu trong từng tab. Chạm lại biểu tượng tab sẽ trở về trang đầu của tab đó. Nút Back Android đóng trang con trước; từ AI trở về tab đã mở trước đó.
 
+## Đăng nhập và đăng ký theo thiết kế mới
+
+Lần chạy mặc định mở giao diện **Đăng nhập** với nền kem chuyển xanh, thẻ trắng, email/mật khẩu, nút hiện/ẩn mật khẩu, quên mật khẩu và Google. Chọn **Đăng ký** để mở form họ tên, email, mật khẩu, nhập lại mật khẩu và đồng ý Điều khoản/Chính sách bảo mật. Nút gửi chỉ bật khi dữ liệu hợp lệ; lỗi giữ lại nội dung để sửa, thao tác đang gửi được khóa chống gửi lặp.
+
+Trong bản xem thử, các nút xác thực thật được tắt. Nhấn **Xem thử ứng dụng** để vào Trang chủ với dữ liệu minh họa. Có thể chạy với `--dart-define=SKIP_AUTH_PREVIEW=true` để vào thẳng bản mẫu như trước.
+
+Khi bật `LIVE_BACKEND=true`, Supabase xử lý đăng nhập, đăng ký, xác nhận/gửi lại email, Google OAuth và đặt lại mật khẩu. Chỉ phiên đăng nhập hợp lệ mới mở Trang chủ; đăng ký đang chờ xác nhận email không mở dữ liệu cá nhân. Callback PKCE được xử lý chung lúc khởi động và khi ứng dụng đang mở; Android/iOS đã có cấu hình URI. Không cần migration hoặc Edge Function mới cho thay đổi xác thực này. Xem [cấu hình Email Auth, Google và cách kiểm tra](docs/auth-upgrade.md).
+
 ## Trợ lý AI theo các frame mới
 
 Nhấn nút vàng lấp lánh để mở trang công cụ AI với nền kem chuyển xanh, thẻ giới thiệu navy, **Tóm tắt / Hỏi đáp / Tạo đề ôn**, hội thoại gần đây và nội dung đã tạo. Lộ trình và flashcard vẫn có ở các lối tắt bên dưới. Có thể gửi câu hỏi ngay từ ô nhập ở trang công cụ.
@@ -65,7 +73,7 @@ Tab biểu đồ mở menu gồm **Thống kê học tập, Tập trung, Quiz, T
 
 Bản mẫu mặc định có lịch sử minh họa sáu tháng để xem đủ biểu đồ, không cần SQL hoặc đăng nhập. Các thay đổi mẫu chỉ giữ trong phiên. Với backend thật, áp dụng thêm `supabase/migrations/202611030003_statistics.sql` **sau** hai migration trước; không cần deploy lại Edge Function cho phần thống kê. Xem [nâng cấp backend Thống kê](docs/statistics-backend-upgrade.md) và [phạm vi kiểm chứng](docs/statistics-verification.md).
 
-Mặc định mở bản mẫu không cần đăng nhập hoặc khóa Supabase. Dữ liệu minh họa chỉ lưu trong phiên chạy; phần chat/quiz mô phỏng được ghi rõ là minh họa.
+Mặc định mở giao diện đăng nhập ở chế độ xem thử, không cần khóa Supabase. Nhấn **Xem thử ứng dụng** để vào bản mẫu không cần tài khoản. Dữ liệu minh họa chỉ lưu trong phiên chạy; phần chat/quiz mô phỏng được ghi rõ là minh họa.
 
 Để chạy trong Android Studio: chọn `lib/main.dart`, chọn thiết bị Android và bấm Run. Hoặc dùng Terminal:
 

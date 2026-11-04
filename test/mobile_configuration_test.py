@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import plistlib
 from pathlib import Path
 import tempfile
@@ -11,6 +12,26 @@ spec.loader.exec_module(mobile)
 
 
 class MobileConfigurationTest(unittest.TestCase):
+    def test_checked_in_android_callback_matches_example_config(self):
+        root = Path(__file__).resolve().parents[1]
+        config = json.loads((root / 'config/dev.example.json').read_text())
+        from urllib.parse import urlparse
+        callback = urlparse(config['AUTH_REDIRECT_URL'])
+        manifest = ET.parse(root / 'android/app/src/main/AndroidManifest.xml').getroot()
+        attr = lambda name: '{' + mobile.ANDROID_NS + '}' + name
+        self.assertTrue(any(data.get(attr('scheme')) == callback.scheme and data.get(attr('host')) == callback.hostname
+                            for data in manifest.findall('application/activity/intent-filter/data')))
+        self.assertTrue(any(meta.get(attr('name')) == 'flutter_deeplinking_enabled' and meta.get(attr('value')) == 'false'
+                            for meta in manifest.findall('application/activity/meta-data')))
+
+    def test_checked_in_ios_uses_app_links_and_registers_callback(self):
+        root = Path(__file__).resolve().parents[1]
+        with (root / 'ios/Runner/Info.plist').open('rb') as stream:
+            config = plistlib.load(stream)
+        self.assertIs(config['FlutterDeepLinkingEnabled'], False)
+        self.assertTrue(any('io.vstudy.app' in entry.get('CFBundleURLSchemes', [])
+                            for entry in config['CFBundleURLTypes']))
+
     def test_android_preserves_launcher_and_is_idempotent(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'AndroidManifest.xml'

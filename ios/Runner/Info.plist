@@ -66,5 +66,18 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.vstudy.app.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>io.vstudy.app</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

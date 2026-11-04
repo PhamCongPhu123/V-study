@@ -20,6 +20,8 @@ flowchart LR
 
 `AccountRepository` quản lý các trường hồ sơ và lựa chọn tài khoản trong `profiles`; email và phiên vẫn thuộc `AuthRepository`. Lưu chi tiết và lưu công tắc cài đặt dùng các tập cột riêng để không ghi đè lẫn nhau. Tất cả cập nhật được lọc theo người dùng hiện tại và kiểm tra bản ghi bị tác động; các trường mở rộng tiếp tục chịu RLS/quyền cập nhật cột của bảng hồ sơ.
 
+`AuthValidation` dùng chung cho form và use case; mật khẩu được gửi nguyên giá trị, không trim. `SupabaseAuthRepository` ánh xạ lỗi sang thông báo an toàn và lưu trạng thái recovery nhận trước khi UI được tạo. `AuthCallbackCoordinator` trong tầng data kiểm tra URI callback, gộp liên kết khởi động/foreground và chống đổi cùng mã PKCE hai lần. `main.dart` tắt bộ xử lý URI tự động của SDK để chỉ có một nơi đổi mã. UI đọc phiên từ repository, không tự coi việc mở Google hay gửi email là đăng nhập thành công. Xem [luồng và cấu hình xác thực](auth-upgrade.md).
+
 ## Dữ liệu và ownership
 
 `auth.users` → `profiles`, môn học, lịch, phiên học, tài liệu, quiz, lượt làm bài và hội thoại. Profile được tạo bởi trigger sau signup, bao gồm tài khoản đã tồn tại trước migration. Các bảng người dùng đều có RLS và quyền cụ thể; khóa ngoại tổng hợp `(id, owner_id)` chặn gắn bản ghi của người khác ngay cả khi biết UUID.

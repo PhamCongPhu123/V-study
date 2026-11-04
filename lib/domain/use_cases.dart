@@ -4,6 +4,7 @@ import 'analytics.dart';
 import 'analytics_repository.dart';
 import 'account_repository.dart';
 import 'ai_workspace.dart';
+import 'auth_validation.dart';
 import 'entities.dart';
 import 'repositories.dart';
 
@@ -262,16 +263,17 @@ class VstudyUseCases {
 
   String _email(String email) {
     final value = email.trim();
-    if (value.length > 254 ||
-        !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value)) {
-      throw const AppException('Vui lòng nhập email hợp lệ.');
+    final error = AuthValidation.email(value);
+    if (error != null) {
+      throw AppException(error);
     }
     return value;
   }
 
   void _password(String password) {
-    if (password.length < 8 || password.length > 128) {
-      throw const AppException('Mật khẩu cần từ 8 đến 128 ký tự.');
+    final error = AuthValidation.password(password, newPassword: true);
+    if (error != null) {
+      throw AppException(error);
     }
   }
 
@@ -284,8 +286,9 @@ class VstudyUseCases {
   }
 
   Future<void> signIn(String email, String password) {
-    if (password.isEmpty) {
-      throw const AppException('Vui lòng nhập mật khẩu.');
+    final error = AuthValidation.password(password);
+    if (error != null) {
+      throw AppException(error);
     }
     return auth.signIn(_email(email), password);
   }
@@ -313,6 +316,9 @@ class VstudyUseCases {
 
   Future<void> resetPassword(String email) =>
       auth.requestPasswordReset(_email(email));
+
+  Future<void> resendConfirmation(String email) =>
+      auth.resendConfirmation(_email(email));
 
   Future<void> updatePassword(String password, String confirm) {
     _password(password);

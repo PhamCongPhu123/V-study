@@ -9,8 +9,16 @@ abstract interface class AuthRepository {
   Future<void> signOut();
   Future<void> signInWithGoogle();
   Future<void> requestPasswordReset(String email);
+  Future<void> resendConfirmation(String email);
   Future<void> updatePassword(String password);
   Stream<bool> get passwordRecovery;
+}
+
+/// Optional state for callbacks received before the authentication UI mounts.
+abstract interface class AuthFlowRepository {
+  bool get isPasswordRecovery;
+  void completePasswordRecovery();
+  String? takePendingAuthNotice();
 }
 
 abstract interface class StudyRepository {
